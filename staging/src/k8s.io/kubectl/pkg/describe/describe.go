@@ -2723,8 +2723,25 @@ func describeService(service *corev1.Service, endpoints *corev1.Endpoints, event
 		w.Write(LEVEL_0, "Type:\t%s\n", service.Spec.Type)
 		w.Write(LEVEL_0, "IP:\t%s\n", service.Spec.ClusterIP)
 
-		if service.Spec.IPFamily != nil {
-			w.Write(LEVEL_0, "IPFamily:\t%s\n", *(service.Spec.IPFamily))
+		if service.Spec.IPFamilyPolicy != nil {
+			w.Write(LEVEL_0, "IPFamilyPolicy:\t%s\n", *(service.Spec.IPFamilyPolicy))
+		}
+
+		if len(service.Spec.ClusterIPs) > 0 {
+			w.Write(LEVEL_0, "ClusterIPs:\t%s\n", strings.Join(service.Spec.ClusterIPs, ","))
+		} else {
+			w.Write(LEVEL_0, "ClusterIPs:\t%s\n", "<none>")
+		}
+
+		if len(service.Spec.IPFamilies) > 0 {
+			ipfamiliesStrings := make([]string, 0, len(service.Spec.IPFamilies))
+			for _, family := range service.Spec.IPFamilies {
+				ipfamiliesStrings = append(ipfamiliesStrings, string(family))
+			}
+
+			w.Write(LEVEL_0, "IPFamilies:\t%s\n", strings.Join(ipfamiliesStrings, ","))
+		} else {
+			w.Write(LEVEL_0, "IPFamilies:\t%s\n", "<none>")
 		}
 
 		if len(service.Spec.ExternalIPs) > 0 {
