@@ -704,3 +704,188 @@ func Test_v1_NodeSpec_to_core_NodeSpec(t *testing.T) {
 		}
 	}
 }
+
+// TestV1toCoreClusterIPsConversion tests the clusterIPs conversion logic for v1=>core
+func TestV1toCoreClusterIPsConversion(t *testing.T) {
+
+	testCases := []struct {
+		name          string
+		serviceType   v1.ServiceType
+		clusterIPs    []string
+		clusterIP     string
+		outClusterIPs []string
+	}{
+		// ClusterIP set, ClusterIPs not set
+		// 1- IP
+		{
+			name:          "ClusterIPSet-ClusterIPsNotSet-IP",
+			clusterIPs:    nil,
+			clusterIP:     "1.2.3.4",
+			outClusterIPs: []string{"1.2.3.4"},
+		},
+		// 1- None
+		{
+			name:          "ClusterIPSet-ClusterIPsNotSet-None",
+			clusterIPs:    nil,
+			clusterIP:     "None",
+			outClusterIPs: []string{"None"},
+		},
+		// 1- empty string
+		{
+			name:          "ClusterIPSet-ClusterIPsNotSet-EmptyString",
+			clusterIPs:    nil,
+			clusterIP:     "",
+			outClusterIPs: nil,
+		},
+		// one ip matching
+		{
+			name:          "ClusterIPSet-ClusterIPsSet-1IPMatching",
+			clusterIPs:    []string{"1.2.3.4"},
+			clusterIP:     "1.2.3.4",
+			outClusterIPs: []string{"1.2.3.4"},
+		},
+		// one ip not matching
+		{
+			name:          "ClusterIPSet-ClusterIPsSet-1IPNotMatching",
+			clusterIPs:    []string{"1.2.3.4"},
+			clusterIP:     "1.1.1.1",
+			outClusterIPs: []string{"1.1.1.1"},
+		},
+		// v4,v6
+		{
+			name:          "ClusterIPSet-ClusterIPsSet-v4/v6",
+			clusterIPs:    []string{"1.2.3.4", "2001::1"},
+			clusterIP:     "1.2.3.4",
+			outClusterIPs: []string{"1.2.3.4", "2001::1"},
+		},
+		//v6,v4
+		{
+			name:          "ClusterIPSet-ClusterIPsSet-v6/v4",
+			clusterIPs:    []string{"2001::1", "1.2.3.4"},
+			clusterIP:     "2001::1",
+			outClusterIPs: []string{"2001::1", "1.2.3.4"},
+		},
+		// two ips first is not matching
+		{
+			name:       "ClusterIPSet-ClusterIPsSet-TwoIPs-1stNotMatch",
+			clusterIPs: []string{"1.1.1.1", "2001::1"},
+			clusterIP:  "1.2.3.4",
+			// (khenidak), the assumption here, is the rest of IPs
+			// are no longer relevant to an old client.
+			// and old client is purposfully resetting to a single IP
+			// TODO: Validate, is this the correct assumption?
+			outClusterIPs: []string{"1.2.3.4"},
+		},
+		//externalNameType
+		{
+			serviceType:   v1.ServiceTypeExternalName,
+			name:          "externalName",
+			clusterIPs:    nil,
+			clusterIP:     "",
+			outClusterIPs: nil,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			v1ServiceSpec := &v1.ServiceSpec{
+				ClusterIP:  tc.clusterIP,
+				ClusterIPs: tc.clusterIPs,
+			}
+			coreServiceSpec := &core.ServiceSpec{}
+			if err := corev1.Convert_v1_ServiceSpec_To_core_ServiceSpec(v1ServiceSpec, coreServiceSpec, nil); err != nil {
+				t.Fatalf("failed to convert %v", v1ServiceSpec)
+			}
+
+			if len(coreServiceSpec.ClusterIPs) != len(tc.outClusterIPs) {
+				t.Fatalf("expected core.ClusterIPs: %v to have len of %v ", coreServiceSpec.ClusterIPs, len(tc.outClusterIPs))
+			}
+			for i, v := range coreServiceSpec.ClusterIPs {
+				if v != tc.outClusterIPs[i] {
+					t.Fatalf("ClusterIP at %v is must be equal to %v", i, tc.outClusterIPs[i])
+				}
+			}
+		})
+	}
+}
+
+// TestV1toCoreClusterIPsConversion tests the clusterIPs conversion logic for v1=>core
+func TestCoretoV1ClusterIPsConversion(t *testing.T) {
+	testCases := []struct {
+		name          string
+		clusterIPs    []string
+		outclusterIP  string
+		outClusterIPs []string
+	}{
+		{
+			name:          "noips",
+			clusterIPs:    nil,
+			outclusterIP:  "",
+			outClusterIPs: nil,
+		},
+		{
+			name:          "1IP-None",
+			clusterIPs:    []string{"None"},
+			outclusterIP:  "None",
+			outClusterIPs: []string{"None"},
+		},
+		{
+			name:          "1IP-v4",
+			clusterIPs:    []string{"1.2.3.4"},
+			outclusterIP:  "1.2.3.4",
+			outClusterIPs: []string{"1.2.3.4"},
+		},
+		{
+			name:          "1IP-v6",
+			clusterIPs:    []string{"2001::1"},
+			outclusterIP:  "2001::1",
+			outClusterIPs: []string{"2001::1"},
+		},
+		{
+			name:          "v4,v6",
+			clusterIPs:    []string{"1.2.3.4", "20001::1"},
+			outclusterIP:  "1.2.3.4",
+			outClusterIPs: []string{"1.2.3.4", "20001::1"},
+		},
+		{
+			name:          "v6,v4",
+			clusterIPs:    []string{"20001::1", "1.2.3.4"},
+			outclusterIP:  "20001::1",
+			outClusterIPs: []string{"20001::1", "1.2.3.4"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			v1ServiceSpec := &v1.ServiceSpec{}
+
+			coreServiceSpec := &core.ServiceSpec{
+				ClusterIPs: tc.clusterIPs,
+			}
+
+			if err := corev1.Convert_core_ServiceSpec_To_v1_ServiceSpec(coreServiceSpec, v1ServiceSpec, nil); err != nil {
+				t.Fatalf("failed to convert %v", coreServiceSpec)
+			}
+			if len(v1ServiceSpec.ClusterIPs) != len(tc.outClusterIPs) {
+				t.Fatalf("expected v1.ClusterIPs: %v to have len of %v ", v1ServiceSpec.ClusterIPs, len(tc.outClusterIPs))
+			}
+
+			if len(tc.clusterIPs) == 0 {
+				if v1ServiceSpec.ClusterIP != "" {
+					t.Fatalf("expected v1.ClusterIP == ''")
+				}
+			} else {
+				if v1ServiceSpec.ClusterIP != tc.clusterIPs[0] {
+					t.Fatalf("expected v1.ClusterIP == %v", tc.clusterIPs[0])
+				}
+
+				for i, v := range v1ServiceSpec.ClusterIPs {
+					if v != tc.outClusterIPs[i] {
+						t.Fatalf("ClusterIP at %v is must be equal to %v", i, tc.outClusterIPs[i])
+					}
+				}
+
+			}
+		})
+	}
+}
