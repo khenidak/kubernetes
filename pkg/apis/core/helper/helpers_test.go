@@ -294,3 +294,72 @@ func TestIsOvercommitAllowed(t *testing.T) {
 		}
 	}
 }
+
+func TestIsServiceIPSet(t *testing.T) {
+	testCases := []struct {
+		input  core.ServiceSpec
+		output bool
+	}{
+		// nil cluster ips
+		{
+			input: core.ServiceSpec{
+				ClusterIPs: nil,
+			},
+
+			output: false,
+		},
+		// empty cluster ips
+		{
+			input: core.ServiceSpec{
+				ClusterIPs: []string{},
+			},
+			output: false,
+		},
+		// None
+		{
+			input: core.ServiceSpec{
+				ClusterIPs: []string{"None"},
+			},
+			output: false,
+		},
+		// true cases
+		// one ipv4
+		{
+			input: core.ServiceSpec{
+				ClusterIPs: []string{"1.2.3.4"},
+			},
+			output: true,
+		},
+		// one ipv6
+		{
+			input: core.ServiceSpec{
+				ClusterIPs: []string{"2001::1"},
+			},
+			output: true,
+		},
+		// v4, v6
+		{
+			input: core.ServiceSpec{
+				ClusterIPs: []string{"1.2.3.4", "2001::1"},
+			},
+			output: true,
+		},
+		// v6, v4
+		{
+			input: core.ServiceSpec{
+				ClusterIPs: []string{"2001::1", "1.2.3.4"},
+			},
+
+			output: true,
+		},
+	}
+
+	for i, tc := range testCases {
+		s := core.Service{
+			Spec: tc.input,
+		}
+		if IsServiceIPSet(&s) != tc.output {
+			t.Errorf("case[%d], input: %v, expected: %v, got: %v", i, tc.input, tc.output, !tc.output)
+		}
+	}
+}
