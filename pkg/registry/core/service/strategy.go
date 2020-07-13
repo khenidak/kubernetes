@@ -95,11 +95,6 @@ func (strategy svcStrategy) PrepareForCreate(ctx context.Context, obj runtime.Ob
 	service := obj.(*api.Service)
 	service.Status = api.ServiceStatus{}
 
-	if utilfeature.DefaultFeatureGate.Enabled(features.IPv6DualStack) && service.Spec.IPFamily == nil {
-		family := strategy.ipFamilies[0]
-		service.Spec.IPFamily = &family
-	}
-
 	dropServiceDisabledFields(service, nil)
 }
 
@@ -109,23 +104,17 @@ func (strategy svcStrategy) PrepareForUpdate(ctx context.Context, obj, old runti
 	oldService := old.(*api.Service)
 	newService.Status = oldService.Status
 
-	if utilfeature.DefaultFeatureGate.Enabled(features.IPv6DualStack) && newService.Spec.IPFamily == nil {
-		if oldService.Spec.IPFamily != nil {
-			newService.Spec.IPFamily = oldService.Spec.IPFamily
-		} else {
-			family := strategy.ipFamilies[0]
-			newService.Spec.IPFamily = &family
-		}
-	}
-
 	dropServiceDisabledFields(newService, oldService)
+	// if service was converted from ClusterIP => ExternalName
+	// then clear ClusterIPs, IPFamilyPolicy and IPFamilies
+	clearClusterIPRelatedFields(newService, oldService)
 }
 
 // Validate validates a new service.
 func (strategy svcStrategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {
 	service := obj.(*api.Service)
 	allErrs := validation.ValidateServiceCreate(service)
-	allErrs = append(allErrs, validation.ValidateConditionalService(service, nil, strategy.ipFamilies)...)
+	allErrs = append(allErrs, validation.ValidateConditionalService(service, nil)...)
 	return allErrs
 }
 
@@ -139,7 +128,7 @@ func (svcStrategy) AllowCreateOnUpdate() bool {
 
 func (strategy svcStrategy) ValidateUpdate(ctx context.Context, obj, old runtime.Object) field.ErrorList {
 	allErrs := validation.ValidateServiceUpdate(obj.(*api.Service), old.(*api.Service))
-	allErrs = append(allErrs, validation.ValidateConditionalService(obj.(*api.Service), old.(*api.Service), strategy.ipFamilies)...)
+	allErrs = append(allErrs, validation.ValidateConditionalService(obj.(*api.Service), old.(*api.Service))...)
 	return allErrs
 }
 
@@ -158,8 +147,9 @@ func (svcStrategy) Export(ctx context.Context, obj runtime.Object, exact bool) e
 	if exact {
 		return nil
 	}
-	if t.Spec.ClusterIP != api.ClusterIPNone {
-		t.Spec.ClusterIP = ""
+	//set ClusterIPs as nil - if ClusterIPs[0] != None
+	if len(t.Spec.ClusterIPs) > 0 && t.Spec.ClusterIPs[0] != api.ClusterIPNone {
+		t.Spec.ClusterIPs = nil
 	}
 	if t.Spec.Type == api.ServiceTypeNodePort {
 		for i := range t.Spec.Ports {
@@ -175,9 +165,14 @@ func (svcStrategy) Export(ctx context.Context, obj runtime.Object, exact bool) e
 //         newSvc.Spec.MyFeature = nil
 //     }
 func dropServiceDisabledFields(newSvc *api.Service, oldSvc *api.Service) {
-	// Drop IPFamily if DualStack is not enabled
-	if !utilfeature.DefaultFeatureGate.Enabled(features.IPv6DualStack) && !serviceIPFamilyInUse(oldSvc) {
-		newSvc.Spec.IPFamily = nil
+	// Drop IPFamily + PreferDualStack if DualStack is not enabled
+	// Why do we check for old and new?
+	// if user set families : [$family don't exist on cluster] and we remove it and remove IPFamilyPolicy
+	// the error they will get is either validation error (if ClusterIP was provided) or
+	// worse getting an ip of wrong family
+	if !utilfeature.DefaultFeatureGate.Enabled(features.IPv6DualStack) && !serviceDualStackFieldsInUse(oldSvc) && !serviceDualStackFieldsInUse(newSvc) {
+		newSvc.Spec.IPFamilies = nil
+		newSvc.Spec.IPFamilyPolicy = nil
 	}
 
 	// Drop TopologyKeys if ServiceTopology is not enabled
@@ -187,14 +182,11 @@ func dropServiceDisabledFields(newSvc *api.Service, oldSvc *api.Service) {
 }
 
 // returns true if svc.Spec.ServiceIPFamily field is in use
-func serviceIPFamilyInUse(svc *api.Service) bool {
+func serviceDualStackFieldsInUse(svc *api.Service) bool {
 	if svc == nil {
 		return false
 	}
-	if svc.Spec.IPFamily != nil {
-		return true
-	}
-	return false
+	return (svc.Spec.IPFamilyPolicy != nil) || len(svc.Spec.IPFamilies) != 0
 }
 
 // returns true if svc.Spec.TopologyKeys field is in use
@@ -225,4 +217,20 @@ func (serviceStatusStrategy) PrepareForUpdate(ctx context.Context, obj, old runt
 // ValidateUpdate is the default update validation for an end user updating status
 func (serviceStatusStrategy) ValidateUpdate(ctx context.Context, obj, old runtime.Object) field.ErrorList {
 	return validation.ValidateServiceStatusUpdate(obj.(*api.Service), old.(*api.Service))
+}
+
+func clearClusterIPRelatedFields(newService, oldService *api.Service) {
+	// in order to allow existing updates to service (specifically converting service from ClusterIP => ExternalName) to work as is
+	// we clear the new optional (fields IPFamilies and IPFamily) Policy on behalf of the user
+	if newService.Spec.Type == api.ServiceTypeExternalName && oldService.Spec.Type != api.ServiceTypeExternalName {
+		// if ClusterIP field was clear, then we clear ClusterIPs as well
+		// _that means_ for dual stack services (i.e. len(ClusterIPs) > 1), user have to clear ClusterIPs
+		// since we operate on core (not v1), we have detect this via ClusterIPs[0]
+		if len(newService.Spec.ClusterIPs) == 0 || (len(newService.Spec.ClusterIPs[0]) == 0 && len(newService.Spec.ClusterIPs) == 1) {
+			newService.Spec.ClusterIPs = nil
+			// reset other fields
+			newService.Spec.IPFamilies = nil
+			newService.Spec.IPFamilyPolicy = nil
+		}
+	}
 }
