@@ -3973,17 +3973,40 @@ type LoadBalancerIngress struct {
 	Hostname string `json:"hostname,omitempty" protobuf:"bytes,2,opt,name=hostname"`
 }
 
+const (
+	// MaxServiceTopologyKeys is the largest number of topology keys allowed on a service
+	MaxServiceTopologyKeys = 16
+)
+
 // IPFamily represents the IP Family (IPv4 or IPv6). This type is used
-// to express the family of an IP expressed by a type (i.e. service.Spec.IPFamily)
+// to express the family of an IP expressed by a type (i.e. service.Spec.IPFamilies)
 type IPFamily string
+
+// IPFamilyPolicyType represents the dualstack-ness requested or required by a Service
+type IPFamilyPolicyType string
 
 const (
 	// IPv4Protocol indicates that this IP is IPv4 protocol
 	IPv4Protocol IPFamily = "IPv4"
 	// IPv6Protocol indicates that this IP is IPv6 protocol
 	IPv6Protocol IPFamily = "IPv6"
-	// MaxServiceTopologyKeys is the largest number of topology keys allowed on a service
-	MaxServiceTopologyKeys = 16
+	// SingleStack indicates that this service is required to have a single IPFamily
+	// The IPFamily assigned is based on the default IPFamily used by the cluster
+	// or as identified by Spec.IPFamilies field
+	SingleStack IPFamilyPolicyType = "SingleStack"
+	// PreferDualStack indicates that this service prefers dualstack (two IPFamilies) whenever
+	// the cluster is configured for dual stack. If the cluster is not configured
+	// with dualstack the service will be assigned single IPFamily. If the IPFamily is not
+	// set in Service.Spec.IPFamilies then the service will be assigned the default IPFamily
+	// configured on the cluster
+	PreferDualStack IPFamilyPolicyType = "PreferDualStack"
+	// RequireDualStack indicate that this server requires dualstack (two IPFamilies). Using
+	// RequireDualStack on a single stack cluster will result in failure. The IPFamilies (and their order) assigned
+	// to this service is based on Service.Spec.IPFamilies. If Service.Spec.IPFamilies was not provided
+	// then IPFamilies will be assigned according to how they are configured on the cluster. If
+	// Service.Spec.IPFamilies has only one entry then the alternative IPFamily will be added by apiserver
+
+	RequireDualStack IPFamilyPolicyType = "RequireDualStack"
 )
 
 // ServiceSpec describes the attributes that a user creates on a service.
@@ -4105,23 +4128,13 @@ type ServiceSpec struct {
 	// +optional
 	SessionAffinityConfig *SessionAffinityConfig `json:"sessionAffinityConfig,omitempty" protobuf:"bytes,14,opt,name=sessionAffinityConfig"`
 
-	// ipFamily specifies whether this Service has a preference for a particular IP family (e.g.
-	// IPv4 vs. IPv6) when the IPv6DualStack feature gate is enabled. In a dual-stack cluster,
-	// you can specify ipFamily when creating a ClusterIP Service to determine whether the
-	// controller will allocate an IPv4 or IPv6 IP for it, and you can specify ipFamily when
-	// creating a headless Service to determine whether it will have IPv4 or IPv6 Endpoints. In
-	// either case, if you do not specify an ipFamily explicitly, it will default to the
-	// cluster's primary IP family.
-	// This field is part of an alpha feature, and you should not make any assumptions about its
-	// semantics other than those described above. In particular, you should not assume that it
-	// can (or cannot) be changed after creation time; that it can only have the values "IPv4"
-	// and "IPv6"; or that its current value on a given Service correctly reflects the current
-	// state of that Service. (For ClusterIP Services, look at clusterIP to see if the Service
-	// is IPv4 or IPv6. For headless Services, look at the endpoints, which may be dual-stack in
-	// the future. For ExternalName Services, ipFamily has no meaning, but it may be set to an
-	// irrelevant value anyway.)
+	// IPFamilies identifies all the IPFamilies assigned to or requested for
+	// this Service. If value was not provided for IPFamilies it will be defaulted
+	// based on the cluster configuration and the value of Service.Spec.IPFamilyPolicy.
+	// Maximum of two values (dualstack IPFamilies) are allowed in IPFamilies.
+	// +listType=atomic
 	// +optional
-	IPFamily *IPFamily `json:"ipFamily,omitempty" protobuf:"bytes,15,opt,name=ipFamily,Configcasttype=IPFamily"`
+	IPFamilies []IPFamily `json:"ipFamilies,omitempty" protobuf:"bytes,15,opt,name=ipFamilies,casttype=IPFamily"`
 
 	// topologyKeys is a preference-order list of topology keys which
 	// implementations of services should use to preferentially sort endpoints
@@ -4137,6 +4150,27 @@ type ServiceSpec struct {
 	// If this is not specified or empty, no topology constraints will be applied.
 	// +optional
 	TopologyKeys []string `json:"topologyKeys,omitempty" protobuf:"bytes,16,opt,name=topologyKeys"`
+
+	// IPFamilyPolicy represents the dualstack-ness requested or required by this
+	// Service. If there is no value provided, then this Service will be considered
+	// SingleStack (single IPFamily). Services can be SingleStack (single IPFamily)
+	// PreferedDualStack (two dualstack IPFamilies on dualstack clusters) or (single
+	// IPFamily on singlestack clusters). Services can also be RequireDualStack where
+	// it will have two dualstack IPFamilies on dualstack configured clusters otherwise
+	// (one a single stack cluster) it will fail. The IPFamilies and ClusterIPs assigned
+	// to this service can be controlled by Service.Spec.IPFamilies and Service.Spec.ClusterIPs
+	// respectively
+	// +optional
+	IPFamilyPolicy *IPFamilyPolicyType `json:"ipFamilyPolicy,omitempty" protobuf:"bytes,17,opt,name=ipFamilyPolicy,casttype=IPFamilyPolicyType"`
+
+	// ClusterIPs identifies all the ClusterIPs assigned to or requested for  this
+	// service. ClusterIPs are assigned or reserved  based on the values of
+	// Service.Spec.IPFamilies. Maximum of two entries (dualstack IPs) are
+	// allowed in ClusterIPs. The IPFamily of each ClusterIP must match
+	// values provided in Service.Spec.IPFamilies
+	// +listType=atomic
+	// +optional
+	ClusterIPs []string `json:"clusterIPs,omitempty" protobuf:"bytes,18,opt,name=clusterIPs"`
 }
 
 // ServicePort contains information on service's port.
