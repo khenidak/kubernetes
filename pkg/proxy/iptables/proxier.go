@@ -381,8 +381,14 @@ func NewDualStackProxier(
 	if err != nil {
 		return nil, fmt.Errorf("unable to create ipv6 proxier: %v", err)
 	}
-
-	return metaproxier.NewMetaProxier(ipv4Proxier, ipv6Proxier), nil // TODO move meta-proxier to mode-neutral package
+	return metaproxier.NewMetaProxier(
+		ipv4Proxier,
+		ipv6Proxier,
+		hostname,
+		nodePortAddresses,
+		syncPeriod,
+		minSyncPeriod,
+		recorder), nil
 }
 
 type iptablesJumpChain struct {

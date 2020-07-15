@@ -549,7 +549,14 @@ func NewDualStackProxier(
 
 	// Return a meta-proxier that dispatch calls between the two
 	// single-stack proxier instances
-	return metaproxier.NewMetaProxier(ipv4Proxier, ipv6Proxier), nil
+	return metaproxier.NewMetaProxier(
+		ipv4Proxier,
+		ipv6Proxier,
+		hostname,
+		nodePortAddresses,
+		syncPeriod,
+		minSyncPeriod,
+		recorder), nil
 }
 
 func filterCIDRs(wantIPv6 bool, cidrs []string) []string {
