@@ -3516,10 +3516,10 @@ const (
 )
 
 // IPFamily represents the IP Family (IPv4 or IPv6). This type is used
-// to express the family of an IP expressed by a type (i.e. Service.Spec.IPFamilies).
+// to express the family of an IP expressed by a type (i.e. service.spec.ipFamilies).
 type IPFamily string
 
-// IPFamilyPolicyType represents the dualstack-ness requested or required by a Service
+// IPFamilyPolicyType represents the dual-stack-ness requested or required by a Service
 type IPFamilyPolicyType string
 
 const (
@@ -3529,19 +3529,19 @@ const (
 	IPv6Protocol IPFamily = "IPv6"
 	// SingleStack indicates that this service is required to have a single IPFamily
 	// The IPFamily assigned is based on the default IPFamily used by the cluster
-	// or as identified by Spec.IPFamilies field
+	// or as identified by service.spec.ipFamilies field
 	SingleStack IPFamilyPolicyType = "SingleStack"
-	// PreferDualStack indicates that this service prefers dualstack (two IPFamilies) whenever
-	// the cluster is configured for dual stack. If the cluster is not configured
-	// with dualstack the service will be assigned single IPFamily. If the IPFamily is not
-	// set in Service.Spec.IPFamilies then the service will be assigned the default IPFamily
+	// PreferDualStack indicates that this service prefers dual-stack (two IPFamilies) when
+	// the cluster is configured for dual-stack. If the cluster is not configured
+	// for dual-stack the service will be assigned single a IPFamily. If the IPFamily is not
+	// set in service.spec.ipFamilies then the service will be assigned the default IPFamily
 	// configured on the cluster
 	PreferDualStack IPFamilyPolicyType = "PreferDualStack"
-	// RequireDualStack indicate that this server requires dualstack (two IPFamilies). Using
+	// RequireDualStack indicates that this service requires dual-stack (two IPFamilies). Using
 	// RequireDualStack on a single stack cluster will result in failure. The IPFamilies (and their order) assigned
-	// to this service is based on Service.Spec.IPFamilies. If Service.Spec.IPFamilies was not provided
-	// then IPFamilies will be assigned according to how they are configured on the cluster. If
-	// Service.Spec.IPFamilies has only one entry then the alternative IPFamily will be added by apiserver
+	// to this service is based on service.spec.ipFamilies. If service.spec.ipFamilies was not provided
+	// then it will be assigned according to how they are configured on the cluster. If
+	// service.spec.ipFamilies has only one entry then the alternative IPFamily will be added by apiserver
 	RequireDualStack IPFamilyPolicyType = "RequireDualStack"
 )
 
@@ -3575,30 +3575,33 @@ type ServiceSpec struct {
 	// More info: https://kubernetes.io/docs/concepts/services-networking/service/
 	Selector map[string]string
 
-	// ClusterIPs identifies all the ClusterIPs assigned to or requested for  this
-	// service. ClusterIPs are assigned or reserved  based on the values of
-	// Service.Spec.IPFamilies. Maximum of two entries (dualstack IPs) are
+	// ClusterIPs identifies all the ClusterIPs assigned to this
+	// service. ClusterIPs are assigned or reserved based on the values of
+	// service.spec.ipFamilies. A maximum of two entries (dual-stack IPs) are
 	// allowed in ClusterIPs. The IPFamily of each ClusterIP must match
-	// values provided in Service.Spec.IPFamilies
+	// values provided in service.spec.ipFamilies
 	// +optional
 	ClusterIPs []string
 
-	// IPFamilies identifies all the IPFamilies assigned to or requested for
-	// this Service. If value was not provided for IPFamilies it will be defaulted
-	// based on the cluster configuration and the value of Service.Spec.IPFamilyPolicy.
-	// Maximum of two values (dualstack IPFamilies) are allowed in IPFamilies.
+	// IPFamilies identifies all the IPFamilies assigned for this Service. If a value
+	// was not provided for IPFamilies it will be defaulted based on the cluster
+	// configuration and the value of service.spec.ipFamilyPolicy. A maximum of two
+	// values (dual-stack IPFamilies) are allowed in IPFamilies. IPFamilies field is
+	// conditionally immutable it allows for adding another IPFamily or removing
+	// the secondary IPFamily. But it does not allow changing the primary IPFamily
+	// of the service.
 	// +optional
 	IPFamilies []IPFamily
 
-	// IPFamilyPolicy represents the dualstack-ness requested or required by this
+	// IPFamilyPolicy represents the dual-stack-ness requested or required by this
 	// Service. If there is no value provided, then this Service will be considered
 	// SingleStack (single IPFamily). Services can be SingleStack (single IPFamily)
-	// PreferedDualStack (two dualstack IPFamilies on dualstack clusters) or (single
-	// IPFamily on singlestack clusters). Services can also be RequireDualStack where
-	// it will have two dualstack IPFamilies on dualstack configured clusters otherwise
-	// (one a single stack cluster) it will fail. The IPFamilies and ClusterIPs assigned
-	// to this service can be controlled by Service.Spec.IPFamilies and Service.Spec.ClusterIPs
-	// respectively
+	// PreferedDualStack (two dual-stack IPFamilies on dual-stack clusters or single
+	// IPFamily on single-stack clusters). Services can also be RequireDualStack where
+	// it will have two dual-stack IPFamilies on dual-stack configured clusters otherwise
+	// (on a single stack cluster) it will fail. The IPFamilies and ClusterIPs assigned
+	// to this service can be controlled by service.spec.ipFamilies and service.spec.clusterIPs
+	// respectively.
 	// +optional
 	IPFamilyPolicy *IPFamilyPolicyType
 
