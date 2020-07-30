@@ -1229,8 +1229,8 @@ func TestPodToEndpointAddressForService(t *testing.T) {
 
 			service: v1.Service{
 				Spec: v1.ServiceSpec{
-					ClusterIP: v1.ClusterIPNone,
-					IPFamily:  &ipv4,
+					ClusterIP:  v1.ClusterIPNone,
+					IPFamilies: []v1.IPFamily{v1.IPv4Protocol},
 				},
 			},
 
@@ -1300,12 +1300,14 @@ func TestPodToEndpointAddressForService(t *testing.T) {
 
 			service: v1.Service{
 				Spec: v1.ServiceSpec{
-					ClusterIP: v1.ClusterIPNone,
-					IPFamily:  &ipv6,
+					ClusterIP:  v1.ClusterIPNone,
+					IPFamilies: []v1.IPFamily{v1.IPv6Protocol},
 				},
 			},
 
-			expectedEndpointFamily: ipv6,
+			// endpoint controller does not know multi families so it will
+			// default to cluster's
+			expectedEndpointFamily: ipv4,
 		},
 		{
 			name: "v6 legacy headless service, in a dual stack cluster",
