@@ -24,9 +24,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/kubernetes/pkg/util/parsers"
 	utilpointer "k8s.io/utils/pointer"
-	// utilfeature "k8s.io/apiserver/pkg/util/feature"
-	// "k8s.io/kubernetes/pkg/features"
-	// utilnet "k8s.io/utils/net"
 )
 
 func addDefaultingFuncs(scheme *runtime.Scheme) error {

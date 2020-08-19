@@ -1909,7 +1909,7 @@ func TestSetDefaultServiceIPFamilyPolicy(t *testing.T) {
 			},
 		},
 		{
-			name:                   "must not set for ExternalName even with symantically valid data",
+			name:                   "must not set for ExternalName even with semantically valid data",
 			expectedIPfamilyPolicy: nil,
 
 			svc: v1.Service{
@@ -1931,7 +1931,7 @@ func TestSetDefaultServiceIPFamilyPolicy(t *testing.T) {
 			},
 		},
 		{
-			name:                   "must set if there are more than on ip family",
+			name:                   "must set if there are more than one ip family",
 			expectedIPfamilyPolicy: &requireDualStack,
 
 			svc: v1.Service{
@@ -1941,7 +1941,7 @@ func TestSetDefaultServiceIPFamilyPolicy(t *testing.T) {
 			},
 		},
 		{
-			name:                   "must set if there is one ip",
+			name:                   "must not set if there is one ip",
 			expectedIPfamilyPolicy: nil,
 
 			svc: v1.Service{

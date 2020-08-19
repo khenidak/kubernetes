@@ -767,13 +767,9 @@ func TestV1toCoreClusterIPsConversion(t *testing.T) {
 		},
 		// two ips first is not matching
 		{
-			name:       "ClusterIPSet-ClusterIPsSet-TwoIPs-1stNotMatch",
-			clusterIPs: []string{"1.1.1.1", "2001::1"},
-			clusterIP:  "1.2.3.4",
-			// (khenidak), the assumption here, is the rest of IPs
-			// are no longer relevant to an old client.
-			// and old client is purposfully resetting to a single IP
-			// TODO: Validate, is this the correct assumption?
+			name:          "ClusterIPSet-ClusterIPsSet-TwoIPs-1stNotMatch",
+			clusterIPs:    []string{"1.1.1.1", "2001::1"},
+			clusterIP:     "1.2.3.4",
 			outClusterIPs: []string{"1.2.3.4"},
 		},
 		//externalNameType
