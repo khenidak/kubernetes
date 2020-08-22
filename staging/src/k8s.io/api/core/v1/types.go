@@ -3996,7 +3996,7 @@ const (
 	SingleStack IPFamilyPolicyType = "SingleStack"
 	// PreferDualStack indicates that this service prefers dual-stack (two IPFamilies) when
 	// the cluster is configured for dual-stack. If the cluster is not configured
-	// for dual-stack the service will be assigned single a IPFamily. If the IPFamily is not
+	// for dual-stack the service will be assigned a single IPFamily. If the IPFamily is not
 	// set in service.spec.ipFamilies then the service will be assigned the default IPFamily
 	// configured on the cluster
 	PreferDualStack IPFamilyPolicyType = "PreferDualStack"
@@ -4142,9 +4142,8 @@ type ServiceSpec struct {
 	// was not provided for IPFamilies it will be defaulted based on the cluster
 	// configuration and the value of service.spec.ipFamilyPolicy. A maximum of two
 	// values (dual-stack IPFamilies) are allowed in IPFamilies. IPFamilies field is
-	// conditionally immutable it allows for adding another IPFamily or removing
-	// the secondary IPFamily. But it does not allow changing the primary IPFamily
-	// of the service.
+	// conditionally mutable: it allows for adding or removing a secondary IPFamily,
+	// but it does not allow changing the primary IPFamily of the service.
 	// +listType=atomic
 	// +optional
 	IPFamilies []IPFamily `json:"ipFamilies,omitempty" protobuf:"bytes,19,opt,name=ipFamilies,casttype=IPFamily"`
@@ -4166,11 +4165,10 @@ type ServiceSpec struct {
 
 	// IPFamilyPolicy represents the dual-stack-ness requested or required by this
 	// Service. If there is no value provided, then this Service will be considered
-	// SingleStack (single IPFamily). Services can be SingleStack (single IPFamily)
+	// SingleStack (single IPFamily). Services can be SingleStack (single IPFamily),
 	// PreferedDualStack (two dual-stack IPFamilies on dual-stack clusters or single
-	// IPFamily on single-stack clusters). Services can also be RequireDualStack where
-	// it will have two dual-stack IPFamilies on dual-stack configured clusters otherwise
-	// (on a single stack cluster) it will fail. The IPFamilies and ClusterIPs assigned
+	// IPFamily on single-stack clusters), or RequireDualStack (two dual-stack IPFamilies
+	// on dual-stack configured clusters, otherwise fail). The IPFamilies and ClusterIPs assigned
 	// to this service can be controlled by service.spec.ipFamilies and service.spec.clusterIPs
 	// respectively.
 	// +optional
