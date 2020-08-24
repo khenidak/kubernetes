@@ -23,9 +23,7 @@ import (
 	"k8s.io/kubernetes/pkg/features"
 )
 
-// ValidateConditionalService validates conditionally valid fields. allowedIPFamilies is an ordered
-// list of the valid IP families (IPv4 or IPv6) that are supported. The first family in the slice
-// is the cluster default, although the clusterIP here dictates the family defaulting.
+// ValidateConditionalService validates conditionally valid fields.
 func ValidateConditionalService(service, oldService *api.Service) field.ErrorList {
 	var errs field.ErrorList
 	// If the SCTPSupport feature is disabled, and the old object isn't using the SCTP feature, prevent the new object from using it
