@@ -47,6 +47,8 @@ func newStorage(t *testing.T) (*GenericREST, *StatusREST, *etcd3testing.EtcdTest
 }
 
 func validService() *api.Service {
+	singleStack := api.SingleStack
+
 	return &api.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "foo",
@@ -55,6 +57,8 @@ func validService() *api.Service {
 		Spec: api.ServiceSpec{
 			Selector:        map[string]string{"bar": "baz"},
 			ClusterIPs:      []string{"None"},
+			IPFamilyPolicy:  &singleStack,
+			IPFamilies:      []api.IPFamily{api.IPv4Protocol},
 			SessionAffinity: "None",
 			Type:            api.ServiceTypeClusterIP,
 			Ports: []api.ServicePort{{
@@ -110,7 +114,7 @@ func TestUpdate(t *testing.T) {
 			object := obj.(*api.Service)
 			object.Spec = api.ServiceSpec{
 				Selector:        map[string]string{"bar": "baz2"},
-				ClusterIPs:      []string{"None"},
+				ClusterIPs:      []string{api.ClusterIPNone},
 				SessionAffinity: api.ServiceAffinityNone,
 				Type:            api.ServiceTypeClusterIP,
 				Ports: []api.ServicePort{{

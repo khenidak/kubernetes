@@ -31,10 +31,14 @@ import (
 	printerstorage "k8s.io/kubernetes/pkg/printers/storage"
 	"k8s.io/kubernetes/pkg/registry/core/service"
 	registry "k8s.io/kubernetes/pkg/registry/core/service"
+
+	netutil "k8s.io/utils/net"
 )
 
 type GenericREST struct {
 	*genericregistry.Store
+	primaryIPFamily *api.IPFamily
+	secondaryFamily *api.IPFamily
 }
 
 // NewREST returns a RESTStorage object that will work against services.
@@ -61,7 +65,26 @@ func NewGenericREST(optsGetter generic.RESTOptionsGetter, serviceCIDR net.IPNet,
 
 	statusStore := *store
 	statusStore.UpdateStrategy = service.NewServiceStatusStrategy(strategy)
-	return &GenericREST{store}, &StatusREST{store: &statusStore}, nil
+
+	ipv4 := api.IPv4Protocol
+	ipv6 := api.IPv6Protocol
+	var primaryIPFamily *api.IPFamily = nil
+	var secondaryFamily *api.IPFamily = nil
+	if netutil.IsIPv6CIDR(&serviceCIDR) {
+		primaryIPFamily = &ipv6
+		if hasSecondary {
+			secondaryFamily = &ipv4
+		}
+	} else {
+		primaryIPFamily = &ipv4
+		if hasSecondary {
+			secondaryFamily = &ipv6
+		}
+	}
+	genericStore := &GenericREST{store, primaryIPFamily, secondaryFamily}
+	store.Decorator = genericStore.defaultServiceOnRead // default on read
+
+	return genericStore, &StatusREST{store: &statusStore}, nil
 }
 
 var (
@@ -98,4 +121,61 @@ func (r *StatusREST) Update(ctx context.Context, name string, objInfo rest.Updat
 	// We are explicitly setting forceAllowCreate to false in the call to the underlying storage because
 	// subresources should never allow create on update.
 	return r.store.Update(ctx, name, objInfo, createValidation, updateValidation, false, options)
+}
+
+// defaults fields that were not previously set on read. becomes an
+// essential part of upgrading a service
+func (r *GenericREST) defaultServiceOnRead(obj runtime.Object) error {
+	service, ok := obj.(*api.Service)
+	if !ok {
+		// hook is called for service and list of service.
+		// this is expected
+		return nil
+	}
+
+	if len(service.Spec.IPFamilies) > 0 {
+		return nil // already defaulted
+	}
+
+	// headless services
+	if len(service.Spec.ClusterIPs) == 1 && service.Spec.ClusterIPs[0] == api.ClusterIPNone {
+		// headless+selectorless
+		if service.Spec.Selector == nil { // we assume since ipfamilies is nil, then ipFamilyPolicy is as well
+			requireDualStack := api.RequireDualStack
+			service.Spec.IPFamilyPolicy = &requireDualStack
+			// headless+selectorless takes both families
+			// we keep the order of families assigned to the cluster
+			service.Spec.IPFamilies = []api.IPFamily{*r.primaryIPFamily}
+			if r.secondaryFamily != nil {
+				service.Spec.IPFamilies = append(service.Spec.IPFamilies, *r.secondaryFamily)
+			}
+		} else {
+			singleStack := api.SingleStack
+			service.Spec.IPFamilyPolicy = &singleStack
+			service.Spec.IPFamilies = []api.IPFamily{*r.primaryIPFamily}
+		}
+	} else {
+		// headful
+		// make sure a slice exists to recieve the families
+		service.Spec.IPFamilies = make([]api.IPFamily, len(service.Spec.ClusterIPs), len(service.Spec.ClusterIPs))
+		for idx, ip := range service.Spec.ClusterIPs {
+			if netutil.IsIPv6String(ip) {
+				service.Spec.IPFamilies[idx] = api.IPv6Protocol
+			} else {
+				service.Spec.IPFamilies[idx] = api.IPv4Protocol
+			}
+
+			// we don't do == 0 so incase service api change (e.g. save without ip assignment)
+			// we won't break here.
+			if len(service.Spec.IPFamilies) == 1 {
+				singleStack := api.SingleStack
+				service.Spec.IPFamilyPolicy = &singleStack
+			} else if len(service.Spec.IPFamilies) == 2 {
+				requireDualStack := api.RequireDualStack
+				service.Spec.IPFamilyPolicy = &requireDualStack
+			}
+		}
+	}
+
+	return nil
 }

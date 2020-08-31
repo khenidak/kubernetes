@@ -846,6 +846,7 @@ func TestServiceStorageValidatesCreate(t *testing.T) {
 	}
 }
 
+/*
 func TestServiceRegistryGetDefaultOnRead(t *testing.T) {
 	testCases := []struct {
 		svc       api.Service
@@ -906,7 +907,7 @@ func TestServiceRegistryGetDefaultOnRead(t *testing.T) {
 		isValidClusterIPFields(t, storage, &testCase.svc, gotSvc)
 	}
 }
-
+*/
 func TestServiceRegistryUpdate(t *testing.T) {
 	ctx := genericapirequest.NewDefaultContext()
 	storage, registry, server := NewTestREST(t, nil, []api.IPFamily{api.IPv4Protocol})
@@ -3550,20 +3551,22 @@ func TestDefaultingValidation(t *testing.T) {
 		////////////////////////////
 		// cluster configured as single stack v4
 		////////////////////////////
-		{
-			name:       "[singlestack:v4] get: externalname on a single stack -v4",
-			onGet:      true,
-			modifyRest: fnMakeSingleStackIPv4Allocator,
-			svc: api.Service{
-				Spec: api.ServiceSpec{
-					Type: api.ServiceTypeExternalName,
+		/*
+			{
+				name:       "[singlestack:v4] get: externalname on a single stack -v4",
+				onGet:      true,
+				modifyRest: fnMakeSingleStackIPv4Allocator,
+				svc: api.Service{
+					Spec: api.ServiceSpec{
+						Type: api.ServiceTypeExternalName,
+					},
 				},
+				//
+				expectedIPFamilyPolicy: nil,
+				expectedIPFamilies:     nil,
+				expectError:            false,
 			},
-			//
-			expectedIPFamilyPolicy: nil,
-			expectedIPFamilies:     nil,
-			expectError:            false,
-		},
+		*/
 		{
 			name:       "[singlestack:v4] set: externalname on a single stack - v4",
 			onGet:      false,
@@ -3578,21 +3581,23 @@ func TestDefaultingValidation(t *testing.T) {
 			expectedIPFamilies:     nil,
 			expectError:            false,
 		},
-		{
-			name:       "[singlestack:v4] get: v4ClusterIPSet",
-			onGet:      true,
-			modifyRest: fnMakeSingleStackIPv4Allocator,
-			svc: api.Service{
-				Spec: api.ServiceSpec{
-					Type:       api.ServiceTypeClusterIP,
-					ClusterIPs: []string{"10.0.0.4"},
+		/*
+			{
+				name:       "[singlestack:v4] get: v4ClusterIPSet",
+				onGet:      true,
+				modifyRest: fnMakeSingleStackIPv4Allocator,
+				svc: api.Service{
+					Spec: api.ServiceSpec{
+						Type:       api.ServiceTypeClusterIP,
+						ClusterIPs: []string{"10.0.0.4"},
+					},
 				},
+				//
+				expectedIPFamilyPolicy: &singleStack,
+				expectedIPFamilies:     []api.IPFamily{api.IPv4Protocol},
+				expectError:            false,
 			},
-			//
-			expectedIPFamilyPolicy: &singleStack,
-			expectedIPFamilies:     []api.IPFamily{api.IPv4Protocol},
-			expectError:            false,
-		},
+		*/
 		{
 			name:       "[singlestack:v4] set: nothing",
 			onGet:      false,
@@ -3623,21 +3628,23 @@ func TestDefaultingValidation(t *testing.T) {
 			expectedIPFamilies:     []api.IPFamily{api.IPv4Protocol},
 			expectError:            false,
 		},
-		{
-			name:       "[singlestack:v4] get: v4IPFamilySet",
-			onGet:      true,
-			modifyRest: fnMakeSingleStackIPv4Allocator,
-			svc: api.Service{
-				Spec: api.ServiceSpec{
-					Type:       api.ServiceTypeClusterIP,
-					IPFamilies: []api.IPFamily{api.IPv4Protocol},
+		/*
+			{
+				name:       "[singlestack:v4] get: v4IPFamilySet",
+				onGet:      true,
+				modifyRest: fnMakeSingleStackIPv4Allocator,
+				svc: api.Service{
+					Spec: api.ServiceSpec{
+						Type:       api.ServiceTypeClusterIP,
+						IPFamilies: []api.IPFamily{api.IPv4Protocol},
+					},
 				},
+				//
+				expectedIPFamilyPolicy: &singleStack,
+				expectedIPFamilies:     []api.IPFamily{api.IPv4Protocol},
+				expectError:            false,
 			},
-			//
-			expectedIPFamilyPolicy: &singleStack,
-			expectedIPFamilies:     []api.IPFamily{api.IPv4Protocol},
-			expectError:            false,
-		},
+		*/
 		{
 			name:       "[singlestack:v4] set: v4IPFamilySet",
 			onGet:      false,
@@ -3653,23 +3660,24 @@ func TestDefaultingValidation(t *testing.T) {
 			expectedIPFamilies:     []api.IPFamily{api.IPv4Protocol},
 			expectError:            false,
 		},
-
-		{
-			name:       "[singlestack:v4] get: v4IPFamilySet v4ClusterIPSet",
-			onGet:      true,
-			modifyRest: fnMakeSingleStackIPv4Allocator,
-			svc: api.Service{
-				Spec: api.ServiceSpec{
-					Type:       api.ServiceTypeClusterIP,
-					ClusterIPs: []string{"10.0.0.4"},
-					IPFamilies: []api.IPFamily{api.IPv4Protocol},
+		/*
+			{
+				name:       "[singlestack:v4] get: v4IPFamilySet v4ClusterIPSet",
+				onGet:      true,
+				modifyRest: fnMakeSingleStackIPv4Allocator,
+				svc: api.Service{
+					Spec: api.ServiceSpec{
+						Type:       api.ServiceTypeClusterIP,
+						ClusterIPs: []string{"10.0.0.4"},
+						IPFamilies: []api.IPFamily{api.IPv4Protocol},
+					},
 				},
+				//
+				expectedIPFamilyPolicy: &singleStack,
+				expectedIPFamilies:     []api.IPFamily{api.IPv4Protocol},
+				expectError:            false,
 			},
-			//
-			expectedIPFamilyPolicy: &singleStack,
-			expectedIPFamilies:     []api.IPFamily{api.IPv4Protocol},
-			expectError:            false,
-		},
+		*/
 		{
 			name:       "[singlestack:v4] set: v4IPFamilySet",
 			onGet:      false,
@@ -3735,107 +3743,108 @@ func TestDefaultingValidation(t *testing.T) {
 			expectedIPFamilies:     []api.IPFamily{api.IPv4Protocol},
 			expectError:            false,
 		},
-		// get path - data is invalid, but should work with no errors
-		{
-			name:       "[singlestack:v4] get: v6IPSet (repair loop should flag it later, get path should work as is)",
-			onGet:      true,
-			modifyRest: fnMakeSingleStackIPv4Allocator,
-			svc: api.Service{
-				Spec: api.ServiceSpec{
-					Type:       api.ServiceTypeClusterIP,
-					ClusterIPs: []string{"2000::1"},
+		/*
+			// get path - data is invalid, but should work with no errors
+			{
+				name:       "[singlestack:v4] get: v6IPSet (repair loop should flag it later, get path should work as is)",
+				onGet:      true,
+				modifyRest: fnMakeSingleStackIPv4Allocator,
+				svc: api.Service{
+					Spec: api.ServiceSpec{
+						Type:       api.ServiceTypeClusterIP,
+						ClusterIPs: []string{"2000::1"},
+					},
 				},
+				//
+				expectedIPFamilyPolicy: &singleStack,
+				expectedIPFamilies:     []api.IPFamily{api.IPv6Protocol},
+				expectError:            false,
 			},
-			//
-			expectedIPFamilyPolicy: &singleStack,
-			expectedIPFamilies:     []api.IPFamily{api.IPv6Protocol},
-			expectError:            false,
-		},
 
-		{
-			name:       "[singlestack:v4] get: v6IPSet v6IPFamilySet (repair loop should flag it later, get path should work as is)",
-			onGet:      true,
-			modifyRest: fnMakeSingleStackIPv4Allocator,
-			svc: api.Service{
-				Spec: api.ServiceSpec{
-					Type:       api.ServiceTypeClusterIP,
-					ClusterIPs: []string{"2000::1"},
-					IPFamilies: []api.IPFamily{api.IPv6Protocol},
+			{
+				name:       "[singlestack:v4] get: v6IPSet v6IPFamilySet (repair loop should flag it later, get path should work as is)",
+				onGet:      true,
+				modifyRest: fnMakeSingleStackIPv4Allocator,
+				svc: api.Service{
+					Spec: api.ServiceSpec{
+						Type:       api.ServiceTypeClusterIP,
+						ClusterIPs: []string{"2000::1"},
+						IPFamilies: []api.IPFamily{api.IPv6Protocol},
+					},
 				},
+				//
+				expectedIPFamilyPolicy: &singleStack,
+				expectedIPFamilies:     []api.IPFamily{api.IPv6Protocol},
+				expectError:            false,
 			},
-			//
-			expectedIPFamilyPolicy: &singleStack,
-			expectedIPFamilies:     []api.IPFamily{api.IPv6Protocol},
-			expectError:            false,
-		},
-		{
-			name:       "[singlestack:v4] get: v4,v6IPSet (repair loop should flag it later, get path should work as is)",
-			onGet:      true,
-			modifyRest: fnMakeSingleStackIPv4Allocator,
-			svc: api.Service{
-				Spec: api.ServiceSpec{
-					Type:           api.ServiceTypeClusterIP,
-					IPFamilyPolicy: &requireDualStack,
-					ClusterIPs:     []string{"10.0.0.10", "2000::1"},
+			{
+				name:       "[singlestack:v4] get: v4,v6IPSet (repair loop should flag it later, get path should work as is)",
+				onGet:      true,
+				modifyRest: fnMakeSingleStackIPv4Allocator,
+				svc: api.Service{
+					Spec: api.ServiceSpec{
+						Type:           api.ServiceTypeClusterIP,
+						IPFamilyPolicy: &requireDualStack,
+						ClusterIPs:     []string{"10.0.0.10", "2000::1"},
+					},
 				},
+				//
+				expectedIPFamilyPolicy: &requireDualStack,
+				expectedIPFamilies:     []api.IPFamily{api.IPv4Protocol, api.IPv6Protocol},
+				expectError:            false,
 			},
-			//
-			expectedIPFamilyPolicy: &requireDualStack,
-			expectedIPFamilies:     []api.IPFamily{api.IPv4Protocol, api.IPv6Protocol},
-			expectError:            false,
-		},
-		{
-			name:       "[singlestack:v4] get: v6,v4IPSet (repair loop should flag it later, get path should work as is)",
-			onGet:      true,
-			modifyRest: fnMakeSingleStackIPv4Allocator,
-			svc: api.Service{
-				Spec: api.ServiceSpec{
-					Type:           api.ServiceTypeClusterIP,
-					IPFamilyPolicy: &requireDualStack,
-					ClusterIPs:     []string{"2000::1", "10.0.0.10"},
+			{
+				name:       "[singlestack:v4] get: v6,v4IPSet (repair loop should flag it later, get path should work as is)",
+				onGet:      true,
+				modifyRest: fnMakeSingleStackIPv4Allocator,
+				svc: api.Service{
+					Spec: api.ServiceSpec{
+						Type:           api.ServiceTypeClusterIP,
+						IPFamilyPolicy: &requireDualStack,
+						ClusterIPs:     []string{"2000::1", "10.0.0.10"},
+					},
 				},
+				//
+				expectedIPFamilyPolicy: &requireDualStack,
+				expectedIPFamilies:     []api.IPFamily{api.IPv6Protocol, api.IPv4Protocol},
+				expectError:            false,
 			},
-			//
-			expectedIPFamilyPolicy: &requireDualStack,
-			expectedIPFamilies:     []api.IPFamily{api.IPv6Protocol, api.IPv4Protocol},
-			expectError:            false,
-		},
 
-		{
-			name:       "[singlestack:v4] get: v4,v6IPSet v4,v6IPFamilySet (repair loop should flag it later, get path should work as is)",
-			onGet:      true,
-			modifyRest: fnMakeSingleStackIPv4Allocator,
-			svc: api.Service{
-				Spec: api.ServiceSpec{
-					Type:           api.ServiceTypeClusterIP,
-					IPFamilyPolicy: &requireDualStack,
-					ClusterIPs:     []string{"10.0.0.10", "2000::1"},
-					IPFamilies:     []api.IPFamily{api.IPv4Protocol, api.IPv6Protocol},
+			{
+				name:       "[singlestack:v4] get: v4,v6IPSet v4,v6IPFamilySet (repair loop should flag it later, get path should work as is)",
+				onGet:      true,
+				modifyRest: fnMakeSingleStackIPv4Allocator,
+				svc: api.Service{
+					Spec: api.ServiceSpec{
+						Type:           api.ServiceTypeClusterIP,
+						IPFamilyPolicy: &requireDualStack,
+						ClusterIPs:     []string{"10.0.0.10", "2000::1"},
+						IPFamilies:     []api.IPFamily{api.IPv4Protocol, api.IPv6Protocol},
+					},
 				},
+				//
+				expectedIPFamilyPolicy: &requireDualStack,
+				expectedIPFamilies:     []api.IPFamily{api.IPv4Protocol, api.IPv6Protocol},
+				expectError:            false,
 			},
-			//
-			expectedIPFamilyPolicy: &requireDualStack,
-			expectedIPFamilies:     []api.IPFamily{api.IPv4Protocol, api.IPv6Protocol},
-			expectError:            false,
-		},
-		{
-			name:       "[singlestack:v4] get: v6,v4IPFamilySet (repair loop should flag it later, get path should work as is)",
-			onGet:      true,
-			modifyRest: fnMakeSingleStackIPv4Allocator,
-			svc: api.Service{
-				Spec: api.ServiceSpec{
-					Type:           api.ServiceTypeClusterIP,
-					IPFamilyPolicy: &requireDualStack,
-					ClusterIPs:     []string{"2000::1", "10.0.0.10"},
-					IPFamilies:     []api.IPFamily{api.IPv6Protocol, api.IPv4Protocol},
+			{
+				name:       "[singlestack:v4] get: v6,v4IPFamilySet (repair loop should flag it later, get path should work as is)",
+				onGet:      true,
+				modifyRest: fnMakeSingleStackIPv4Allocator,
+				svc: api.Service{
+					Spec: api.ServiceSpec{
+						Type:           api.ServiceTypeClusterIP,
+						IPFamilyPolicy: &requireDualStack,
+						ClusterIPs:     []string{"2000::1", "10.0.0.10"},
+						IPFamilies:     []api.IPFamily{api.IPv6Protocol, api.IPv4Protocol},
+					},
 				},
+				//
+				expectedIPFamilyPolicy: &requireDualStack,
+				expectedIPFamilies:     []api.IPFamily{api.IPv6Protocol, api.IPv4Protocol},
+				expectError:            false,
 			},
-			//
-			expectedIPFamilyPolicy: &requireDualStack,
-			expectedIPFamilies:     []api.IPFamily{api.IPv6Protocol, api.IPv4Protocol},
-			expectError:            false,
-		},
-
+		*/
 		{
 			name:       "[singlestack:v4] set: v6IPSet",
 			onGet:      false,
@@ -3969,20 +3978,22 @@ func TestDefaultingValidation(t *testing.T) {
 		////////////////////////////
 		// cluster configured as single stack v6
 		////////////////////////////
-		{
-			name:       "[singlestack:v6] get: externalname on a single stack -v6",
-			onGet:      true,
-			modifyRest: fnMakeSingleStackIPv6Allocator,
-			svc: api.Service{
-				Spec: api.ServiceSpec{
-					Type: api.ServiceTypeExternalName,
+		/*
+			{
+				name:       "[singlestack:v6] get: externalname on a single stack -v6",
+				onGet:      true,
+				modifyRest: fnMakeSingleStackIPv6Allocator,
+				svc: api.Service{
+					Spec: api.ServiceSpec{
+						Type: api.ServiceTypeExternalName,
+					},
 				},
+				//
+				expectedIPFamilyPolicy: nil,
+				expectedIPFamilies:     nil,
+				expectError:            false,
 			},
-			//
-			expectedIPFamilyPolicy: nil,
-			expectedIPFamilies:     nil,
-			expectError:            false,
-		},
+		*/
 		{
 			name:       "[singlestack:v6] set: externalname on a single stack - v4",
 			onGet:      false,
@@ -4011,22 +4022,23 @@ func TestDefaultingValidation(t *testing.T) {
 			expectedIPFamilies:     []api.IPFamily{api.IPv6Protocol},
 			expectError:            false,
 		},
-
-		{
-			name:       "[singlestack:v6] get: v6ClusterIPSet",
-			onGet:      true,
-			modifyRest: fnMakeSingleStackIPv6Allocator,
-			svc: api.Service{
-				Spec: api.ServiceSpec{
-					Type:       api.ServiceTypeClusterIP,
-					ClusterIPs: []string{"2000::1"},
+		/*
+			{
+				name:       "[singlestack:v6] get: v6ClusterIPSet",
+				onGet:      true,
+				modifyRest: fnMakeSingleStackIPv6Allocator,
+				svc: api.Service{
+					Spec: api.ServiceSpec{
+						Type:       api.ServiceTypeClusterIP,
+						ClusterIPs: []string{"2000::1"},
+					},
 				},
+				//
+				expectedIPFamilyPolicy: &singleStack,
+				expectedIPFamilies:     []api.IPFamily{api.IPv6Protocol},
+				expectError:            false,
 			},
-			//
-			expectedIPFamilyPolicy: &singleStack,
-			expectedIPFamilies:     []api.IPFamily{api.IPv6Protocol},
-			expectError:            false,
-		},
+		*/
 		{
 			name:       "[singlestack:v6] set: v6Cluster IPSet",
 			onGet:      false,
@@ -4042,21 +4054,23 @@ func TestDefaultingValidation(t *testing.T) {
 			expectedIPFamilies:     []api.IPFamily{api.IPv6Protocol},
 			expectError:            false,
 		},
-		{
-			name:       "[singlestack:v6] get: v4IPFamilySet",
-			onGet:      true,
-			modifyRest: fnMakeSingleStackIPv6Allocator,
-			svc: api.Service{
-				Spec: api.ServiceSpec{
-					Type:       api.ServiceTypeClusterIP,
-					IPFamilies: []api.IPFamily{api.IPv6Protocol},
+		/*
+			{
+				name:       "[singlestack:v6] get: v4IPFamilySet",
+				onGet:      true,
+				modifyRest: fnMakeSingleStackIPv6Allocator,
+				svc: api.Service{
+					Spec: api.ServiceSpec{
+						Type:       api.ServiceTypeClusterIP,
+						IPFamilies: []api.IPFamily{api.IPv6Protocol},
+					},
 				},
+				//
+				expectedIPFamilyPolicy: &singleStack,
+				expectedIPFamilies:     []api.IPFamily{api.IPv6Protocol},
+				expectError:            false,
 			},
-			//
-			expectedIPFamilyPolicy: &singleStack,
-			expectedIPFamilies:     []api.IPFamily{api.IPv6Protocol},
-			expectError:            false,
-		},
+		*/
 		{
 			name:       "[singlestack:v6] set: v4IPFamilySet",
 			onGet:      false,
@@ -4072,22 +4086,24 @@ func TestDefaultingValidation(t *testing.T) {
 			expectedIPFamilies:     []api.IPFamily{api.IPv6Protocol},
 			expectError:            false,
 		},
-		{
-			name:       "[singlestack:v6] get: v6IPFamilySet v6ClusterIPSet",
-			onGet:      true,
-			modifyRest: fnMakeSingleStackIPv6Allocator,
-			svc: api.Service{
-				Spec: api.ServiceSpec{
-					Type:       api.ServiceTypeClusterIP,
-					ClusterIPs: []string{"2000::1"},
-					IPFamilies: []api.IPFamily{api.IPv6Protocol},
+		/*
+			{
+				name:       "[singlestack:v6] get: v6IPFamilySet v6ClusterIPSet",
+				onGet:      true,
+				modifyRest: fnMakeSingleStackIPv6Allocator,
+				svc: api.Service{
+					Spec: api.ServiceSpec{
+						Type:       api.ServiceTypeClusterIP,
+						ClusterIPs: []string{"2000::1"},
+						IPFamilies: []api.IPFamily{api.IPv6Protocol},
+					},
 				},
+				//
+				expectedIPFamilyPolicy: &singleStack,
+				expectedIPFamilies:     []api.IPFamily{api.IPv6Protocol},
+				expectError:            false,
 			},
-			//
-			expectedIPFamilyPolicy: &singleStack,
-			expectedIPFamilies:     []api.IPFamily{api.IPv6Protocol},
-			expectError:            false,
-		},
+		*/
 		{
 			name:       "[singlestack:v6] set: v6IPFamilySet",
 			onGet:      false,
@@ -4152,106 +4168,107 @@ func TestDefaultingValidation(t *testing.T) {
 			expectedIPFamilies:     []api.IPFamily{api.IPv6Protocol},
 			expectError:            false,
 		},
-		// get path - data is invalid, but should work with no errors
-		{
-			name:       "[singlestack:v6] get: v4IPSet (repair loop should flag it later, get path should work as is)",
-			onGet:      true,
-			modifyRest: fnMakeSingleStackIPv6Allocator,
-			svc: api.Service{
-				Spec: api.ServiceSpec{
-					Type:       api.ServiceTypeClusterIP,
-					ClusterIPs: []string{"10.0.0.10"},
+		/*
+			// get path - data is invalid, but should work with no errors
+			{
+				name:       "[singlestack:v6] get: v4IPSet (repair loop should flag it later, get path should work as is)",
+				onGet:      true,
+				modifyRest: fnMakeSingleStackIPv6Allocator,
+				svc: api.Service{
+					Spec: api.ServiceSpec{
+						Type:       api.ServiceTypeClusterIP,
+						ClusterIPs: []string{"10.0.0.10"},
+					},
 				},
+				//
+				expectedIPFamilyPolicy: &singleStack,
+				expectedIPFamilies:     []api.IPFamily{api.IPv4Protocol},
+				expectError:            false,
 			},
-			//
-			expectedIPFamilyPolicy: &singleStack,
-			expectedIPFamilies:     []api.IPFamily{api.IPv4Protocol},
-			expectError:            false,
-		},
 
-		{
-			name:       "[singlestack:v6] get: v4IPSet v4IPFamilySet (repair loop should flag it later, get path should work as is)",
-			onGet:      true,
-			modifyRest: fnMakeSingleStackIPv6Allocator,
-			svc: api.Service{
-				Spec: api.ServiceSpec{
-					Type:       api.ServiceTypeClusterIP,
-					ClusterIPs: []string{"10.0.0.10"},
-					IPFamilies: []api.IPFamily{api.IPv4Protocol},
+			{
+				name:       "[singlestack:v6] get: v4IPSet v4IPFamilySet (repair loop should flag it later, get path should work as is)",
+				onGet:      true,
+				modifyRest: fnMakeSingleStackIPv6Allocator,
+				svc: api.Service{
+					Spec: api.ServiceSpec{
+						Type:       api.ServiceTypeClusterIP,
+						ClusterIPs: []string{"10.0.0.10"},
+						IPFamilies: []api.IPFamily{api.IPv4Protocol},
+					},
 				},
+				//
+				expectedIPFamilyPolicy: &singleStack,
+				expectedIPFamilies:     []api.IPFamily{api.IPv4Protocol},
+				expectError:            false,
 			},
-			//
-			expectedIPFamilyPolicy: &singleStack,
-			expectedIPFamilies:     []api.IPFamily{api.IPv4Protocol},
-			expectError:            false,
-		},
-		{
-			name:       "[singlestack:v6] get: v6,v4IPSet (repair loop should flag it later, get path should work as is)",
-			onGet:      true,
-			modifyRest: fnMakeSingleStackIPv6Allocator,
-			svc: api.Service{
-				Spec: api.ServiceSpec{
-					Type:           api.ServiceTypeClusterIP,
-					IPFamilyPolicy: &requireDualStack,
-					ClusterIPs:     []string{"2000::1", "10.0.0.10"},
+			{
+				name:       "[singlestack:v6] get: v6,v4IPSet (repair loop should flag it later, get path should work as is)",
+				onGet:      true,
+				modifyRest: fnMakeSingleStackIPv6Allocator,
+				svc: api.Service{
+					Spec: api.ServiceSpec{
+						Type:           api.ServiceTypeClusterIP,
+						IPFamilyPolicy: &requireDualStack,
+						ClusterIPs:     []string{"2000::1", "10.0.0.10"},
+					},
 				},
+				//
+				expectedIPFamilyPolicy: &requireDualStack,
+				expectedIPFamilies:     []api.IPFamily{api.IPv6Protocol, api.IPv4Protocol},
+				expectError:            false,
 			},
-			//
-			expectedIPFamilyPolicy: &requireDualStack,
-			expectedIPFamilies:     []api.IPFamily{api.IPv6Protocol, api.IPv4Protocol},
-			expectError:            false,
-		},
-		{
-			name:       "[singlestack:v6] get: v4,v6IPSet (repair loop should flag it later, get path should work as is)",
-			onGet:      true,
-			modifyRest: fnMakeSingleStackIPv6Allocator,
-			svc: api.Service{
-				Spec: api.ServiceSpec{
-					Type:           api.ServiceTypeClusterIP,
-					IPFamilyPolicy: &requireDualStack,
-					ClusterIPs:     []string{"10.0.0.10", "2000::1"},
+			{
+				name:       "[singlestack:v6] get: v4,v6IPSet (repair loop should flag it later, get path should work as is)",
+				onGet:      true,
+				modifyRest: fnMakeSingleStackIPv6Allocator,
+				svc: api.Service{
+					Spec: api.ServiceSpec{
+						Type:           api.ServiceTypeClusterIP,
+						IPFamilyPolicy: &requireDualStack,
+						ClusterIPs:     []string{"10.0.0.10", "2000::1"},
+					},
 				},
+				//
+				expectedIPFamilyPolicy: &requireDualStack,
+				expectedIPFamilies:     []api.IPFamily{api.IPv4Protocol, api.IPv6Protocol},
+				expectError:            false,
 			},
-			//
-			expectedIPFamilyPolicy: &requireDualStack,
-			expectedIPFamilies:     []api.IPFamily{api.IPv4Protocol, api.IPv6Protocol},
-			expectError:            false,
-		},
-		{
-			name:       "[singlestack:v6] get: v4,v6IPSet v4,v6IPFamilySet (repair loop should flag it later, get path should work as is)",
-			onGet:      true,
-			modifyRest: fnMakeSingleStackIPv6Allocator,
-			svc: api.Service{
-				Spec: api.ServiceSpec{
-					Type:           api.ServiceTypeClusterIP,
-					IPFamilyPolicy: &requireDualStack,
-					ClusterIPs:     []string{"10.0.0.10", "2000::1"},
-					IPFamilies:     []api.IPFamily{api.IPv4Protocol, api.IPv6Protocol},
+			{
+				name:       "[singlestack:v6] get: v4,v6IPSet v4,v6IPFamilySet (repair loop should flag it later, get path should work as is)",
+				onGet:      true,
+				modifyRest: fnMakeSingleStackIPv6Allocator,
+				svc: api.Service{
+					Spec: api.ServiceSpec{
+						Type:           api.ServiceTypeClusterIP,
+						IPFamilyPolicy: &requireDualStack,
+						ClusterIPs:     []string{"10.0.0.10", "2000::1"},
+						IPFamilies:     []api.IPFamily{api.IPv4Protocol, api.IPv6Protocol},
+					},
 				},
+				//
+				expectedIPFamilyPolicy: &requireDualStack,
+				expectedIPFamilies:     []api.IPFamily{api.IPv4Protocol, api.IPv6Protocol},
+				expectError:            false,
 			},
-			//
-			expectedIPFamilyPolicy: &requireDualStack,
-			expectedIPFamilies:     []api.IPFamily{api.IPv4Protocol, api.IPv6Protocol},
-			expectError:            false,
-		},
-		{
-			name:       "[singlestack:v6] get: v6,v4IPFamilySet (repair loop should flag it later, get path should work as is)",
-			onGet:      true,
-			modifyRest: fnMakeSingleStackIPv6Allocator,
-			svc: api.Service{
-				Spec: api.ServiceSpec{
-					Type:           api.ServiceTypeClusterIP,
-					IPFamilyPolicy: &requireDualStack,
-					ClusterIPs:     []string{"2000::1", "10.0.0.10"},
-					IPFamilies:     []api.IPFamily{api.IPv6Protocol, api.IPv4Protocol},
+			{
+				name:       "[singlestack:v6] get: v6,v4IPFamilySet (repair loop should flag it later, get path should work as is)",
+				onGet:      true,
+				modifyRest: fnMakeSingleStackIPv6Allocator,
+				svc: api.Service{
+					Spec: api.ServiceSpec{
+						Type:           api.ServiceTypeClusterIP,
+						IPFamilyPolicy: &requireDualStack,
+						ClusterIPs:     []string{"2000::1", "10.0.0.10"},
+						IPFamilies:     []api.IPFamily{api.IPv6Protocol, api.IPv4Protocol},
+					},
 				},
+				//
+				expectedIPFamilyPolicy: &requireDualStack,
+				expectedIPFamilies:     []api.IPFamily{api.IPv6Protocol, api.IPv4Protocol},
+				expectError:            false,
 			},
-			//
-			expectedIPFamilyPolicy: &requireDualStack,
-			expectedIPFamilies:     []api.IPFamily{api.IPv6Protocol, api.IPv4Protocol},
-			expectError:            false,
-		},
-
+		*/
 		{
 			name:       "[singlestack:v6] set: v4IPSet",
 			onGet:      false,
@@ -4384,20 +4401,22 @@ func TestDefaultingValidation(t *testing.T) {
 		////////////////////////////
 		// cluster configured as dual stack v4,6
 		////////////////////////////
-		{
-			name:       "[dualstack:v4,v6] get: externalname on a dual stack -v4,v6",
-			onGet:      true,
-			modifyRest: fnMakeDualStackStackIPv4IPv6Allocator,
-			svc: api.Service{
-				Spec: api.ServiceSpec{
-					Type: api.ServiceTypeExternalName,
+		/*
+			{
+				name:       "[dualstack:v4,v6] get: externalname on a dual stack -v4,v6",
+				onGet:      true,
+				modifyRest: fnMakeDualStackStackIPv4IPv6Allocator,
+				svc: api.Service{
+					Spec: api.ServiceSpec{
+						Type: api.ServiceTypeExternalName,
+					},
 				},
+				//
+				expectedIPFamilyPolicy: nil,
+				expectedIPFamilies:     nil,
+				expectError:            false,
 			},
-			//
-			expectedIPFamilyPolicy: nil,
-			expectedIPFamilies:     nil,
-			expectError:            false,
-		},
+		*/
 		{
 			name:       "[dualstack:v4,v6] set: externalname on a dual stack - v4,v6",
 			onGet:      false,
@@ -4412,22 +4431,24 @@ func TestDefaultingValidation(t *testing.T) {
 			expectedIPFamilies:     nil,
 			expectError:            false,
 		},
-		// v4 tests
-		{
-			name:       "[dualstack:v4,v6] get: v4ClusterIPSet",
-			onGet:      true,
-			modifyRest: fnMakeDualStackStackIPv4IPv6Allocator,
-			svc: api.Service{
-				Spec: api.ServiceSpec{
-					Type:       api.ServiceTypeClusterIP,
-					ClusterIPs: []string{"10.0.0.4"},
+		/*
+			// v4 tests
+			{
+				name:       "[dualstack:v4,v6] get: v4ClusterIPSet",
+				onGet:      true,
+				modifyRest: fnMakeDualStackStackIPv4IPv6Allocator,
+				svc: api.Service{
+					Spec: api.ServiceSpec{
+						Type:       api.ServiceTypeClusterIP,
+						ClusterIPs: []string{"10.0.0.4"},
+					},
 				},
+				//
+				expectedIPFamilyPolicy: &singleStack,
+				expectedIPFamilies:     []api.IPFamily{api.IPv4Protocol},
+				expectError:            false,
 			},
-			//
-			expectedIPFamilyPolicy: &singleStack,
-			expectedIPFamilies:     []api.IPFamily{api.IPv4Protocol},
-			expectError:            false,
-		},
+		*/
 		{
 			name:       "[dualstack:v4,v6] set: nothing",
 			onGet:      false,
@@ -4458,21 +4479,23 @@ func TestDefaultingValidation(t *testing.T) {
 			expectedIPFamilies:     []api.IPFamily{api.IPv4Protocol},
 			expectError:            false,
 		},
-		{
-			name:       "[dualstack:v4,v6] get: v4IPFamilySet",
-			onGet:      true,
-			modifyRest: fnMakeDualStackStackIPv4IPv6Allocator,
-			svc: api.Service{
-				Spec: api.ServiceSpec{
-					Type:       api.ServiceTypeClusterIP,
-					IPFamilies: []api.IPFamily{api.IPv4Protocol},
+		/*
+			{
+				name:       "[dualstack:v4,v6] get: v4IPFamilySet",
+				onGet:      true,
+				modifyRest: fnMakeDualStackStackIPv4IPv6Allocator,
+				svc: api.Service{
+					Spec: api.ServiceSpec{
+						Type:       api.ServiceTypeClusterIP,
+						IPFamilies: []api.IPFamily{api.IPv4Protocol},
+					},
 				},
+				//
+				expectedIPFamilyPolicy: &singleStack,
+				expectedIPFamilies:     []api.IPFamily{api.IPv4Protocol},
+				expectError:            false,
 			},
-			//
-			expectedIPFamilyPolicy: &singleStack,
-			expectedIPFamilies:     []api.IPFamily{api.IPv4Protocol},
-			expectError:            false,
-		},
+		*/
 		{
 			name:       "[dualstack:v4,v6] set: v4IPFamilySet",
 			onGet:      false,
@@ -4488,10 +4511,27 @@ func TestDefaultingValidation(t *testing.T) {
 			expectedIPFamilies:     []api.IPFamily{api.IPv4Protocol},
 			expectError:            false,
 		},
-
+		/*
+			{
+				name:       "[dualstack:v4,v6] get: v4IPFamilySet v4ClusterIPSet",
+				onGet:      true,
+				modifyRest: fnMakeDualStackStackIPv4IPv6Allocator,
+				svc: api.Service{
+					Spec: api.ServiceSpec{
+						Type:       api.ServiceTypeClusterIP,
+						ClusterIPs: []string{"10.0.0.4"},
+						IPFamilies: []api.IPFamily{api.IPv4Protocol},
+					},
+				},
+				//
+				expectedIPFamilyPolicy: &singleStack,
+				expectedIPFamilies:     []api.IPFamily{api.IPv4Protocol},
+				expectError:            false,
+			},
+		*/
 		{
-			name:       "[dualstack:v4,v6] get: v4IPFamilySet v4ClusterIPSet",
-			onGet:      true,
+			name:       "[dualstack:v4,v6] set: v4IPFamilySet",
+			onGet:      false,
 			modifyRest: fnMakeDualStackStackIPv4IPv6Allocator,
 			svc: api.Service{
 				Spec: api.ServiceSpec{
@@ -4505,38 +4545,24 @@ func TestDefaultingValidation(t *testing.T) {
 			expectedIPFamilies:     []api.IPFamily{api.IPv4Protocol},
 			expectError:            false,
 		},
-		{
-			name:       "[dualstack:v4,v6] set: v4IPFamilySet",
-			onGet:      false,
-			modifyRest: fnMakeDualStackStackIPv4IPv6Allocator,
-			svc: api.Service{
-				Spec: api.ServiceSpec{
-					Type:       api.ServiceTypeClusterIP,
-					ClusterIPs: []string{"10.0.0.4"},
-					IPFamilies: []api.IPFamily{api.IPv4Protocol},
+		/*
+			// v6 tests
+			{
+				name:       "[dualstack:v4,v6] get: v6ClusterIPSet",
+				onGet:      true,
+				modifyRest: fnMakeDualStackStackIPv4IPv6Allocator,
+				svc: api.Service{
+					Spec: api.ServiceSpec{
+						Type:       api.ServiceTypeClusterIP,
+						ClusterIPs: []string{"2000::1"},
+					},
 				},
+				//
+				expectedIPFamilyPolicy: &singleStack,
+				expectedIPFamilies:     []api.IPFamily{api.IPv6Protocol},
+				expectError:            false,
 			},
-			//
-			expectedIPFamilyPolicy: &singleStack,
-			expectedIPFamilies:     []api.IPFamily{api.IPv4Protocol},
-			expectError:            false,
-		},
-		// v6 tests
-		{
-			name:       "[dualstack:v4,v6] get: v6ClusterIPSet",
-			onGet:      true,
-			modifyRest: fnMakeDualStackStackIPv4IPv6Allocator,
-			svc: api.Service{
-				Spec: api.ServiceSpec{
-					Type:       api.ServiceTypeClusterIP,
-					ClusterIPs: []string{"2000::1"},
-				},
-			},
-			//
-			expectedIPFamilyPolicy: &singleStack,
-			expectedIPFamilies:     []api.IPFamily{api.IPv6Protocol},
-			expectError:            false,
-		},
+		*/
 		{
 			name:       "[dualstack:v4,v6] set: v6ClusterIPSet",
 			onGet:      false,
@@ -4552,21 +4578,23 @@ func TestDefaultingValidation(t *testing.T) {
 			expectedIPFamilies:     []api.IPFamily{api.IPv6Protocol},
 			expectError:            false,
 		},
-		{
-			name:       "[dualstack:v4,v6] get: v6IPFamilySet",
-			onGet:      true,
-			modifyRest: fnMakeDualStackStackIPv4IPv6Allocator,
-			svc: api.Service{
-				Spec: api.ServiceSpec{
-					Type:       api.ServiceTypeClusterIP,
-					IPFamilies: []api.IPFamily{api.IPv6Protocol},
+		/*
+			{
+				name:       "[dualstack:v4,v6] get: v6IPFamilySet",
+				onGet:      true,
+				modifyRest: fnMakeDualStackStackIPv4IPv6Allocator,
+				svc: api.Service{
+					Spec: api.ServiceSpec{
+						Type:       api.ServiceTypeClusterIP,
+						IPFamilies: []api.IPFamily{api.IPv6Protocol},
+					},
 				},
+				//
+				expectedIPFamilyPolicy: &singleStack,
+				expectedIPFamilies:     []api.IPFamily{api.IPv6Protocol},
+				expectError:            false,
 			},
-			//
-			expectedIPFamilyPolicy: &singleStack,
-			expectedIPFamilies:     []api.IPFamily{api.IPv6Protocol},
-			expectError:            false,
-		},
+		*/
 		{
 			name:       "[dualstack:v4,v6] set: v6IPFamilySet",
 			onGet:      false,
@@ -4582,23 +4610,24 @@ func TestDefaultingValidation(t *testing.T) {
 			expectedIPFamilies:     []api.IPFamily{api.IPv6Protocol},
 			expectError:            false,
 		},
-
-		{
-			name:       "[dualstack:v4,v6] get: v6IPFamilySet v6ClusterIPSet",
-			onGet:      true,
-			modifyRest: fnMakeDualStackStackIPv4IPv6Allocator,
-			svc: api.Service{
-				Spec: api.ServiceSpec{
-					Type:       api.ServiceTypeClusterIP,
-					ClusterIPs: []string{"2000::1"},
-					IPFamilies: []api.IPFamily{api.IPv6Protocol},
+		/*
+			{
+				name:       "[dualstack:v4,v6] get: v6IPFamilySet v6ClusterIPSet",
+				onGet:      true,
+				modifyRest: fnMakeDualStackStackIPv4IPv6Allocator,
+				svc: api.Service{
+					Spec: api.ServiceSpec{
+						Type:       api.ServiceTypeClusterIP,
+						ClusterIPs: []string{"2000::1"},
+						IPFamilies: []api.IPFamily{api.IPv6Protocol},
+					},
 				},
+				//
+				expectedIPFamilyPolicy: &singleStack,
+				expectedIPFamilies:     []api.IPFamily{api.IPv6Protocol},
+				expectError:            false,
 			},
-			//
-			expectedIPFamilyPolicy: &singleStack,
-			expectedIPFamilies:     []api.IPFamily{api.IPv6Protocol},
-			expectError:            false,
-		},
+		*/
 		{
 			name:       "[dualstack:v4,v6] set: v6IPFamilySet",
 			onGet:      false,
@@ -4899,20 +4928,22 @@ func TestDefaultingValidation(t *testing.T) {
 		////////////////////////////
 		// cluster configured as dual stack v6,4
 		////////////////////////////
-		{
-			name:       "[dualstack:v6,v4] get: externalname on a dual stack -v6,v4",
-			onGet:      true,
-			modifyRest: fnMakeDualStackStackIPv6IPv4Allocator,
-			svc: api.Service{
-				Spec: api.ServiceSpec{
-					Type: api.ServiceTypeExternalName,
+		/*
+			{
+				name:       "[dualstack:v6,v4] get: externalname on a dual stack -v6,v4",
+				onGet:      true,
+				modifyRest: fnMakeDualStackStackIPv6IPv4Allocator,
+				svc: api.Service{
+					Spec: api.ServiceSpec{
+						Type: api.ServiceTypeExternalName,
+					},
 				},
+				//
+				expectedIPFamilyPolicy: nil,
+				expectedIPFamilies:     nil,
+				expectError:            false,
 			},
-			//
-			expectedIPFamilyPolicy: nil,
-			expectedIPFamilies:     nil,
-			expectError:            false,
-		},
+		*/
 		{
 			name:       "[dualstack:v6,v4] set: externalname on a dual stack - v6,v4",
 			onGet:      false,
@@ -4941,22 +4972,24 @@ func TestDefaultingValidation(t *testing.T) {
 			expectedIPFamilies:     []api.IPFamily{api.IPv6Protocol},
 			expectError:            false,
 		},
-		// v4 tests
-		{
-			name:       "[dualstack:v6,v4] get: v4ClusterIPSet",
-			onGet:      true,
-			modifyRest: fnMakeDualStackStackIPv6IPv4Allocator,
-			svc: api.Service{
-				Spec: api.ServiceSpec{
-					Type:       api.ServiceTypeClusterIP,
-					ClusterIPs: []string{"10.0.0.4"},
+		/*
+			// v4 tests
+			{
+				name:       "[dualstack:v6,v4] get: v4ClusterIPSet",
+				onGet:      true,
+				modifyRest: fnMakeDualStackStackIPv6IPv4Allocator,
+				svc: api.Service{
+					Spec: api.ServiceSpec{
+						Type:       api.ServiceTypeClusterIP,
+						ClusterIPs: []string{"10.0.0.4"},
+					},
 				},
+				//
+				expectedIPFamilyPolicy: &singleStack,
+				expectedIPFamilies:     []api.IPFamily{api.IPv4Protocol},
+				expectError:            false,
 			},
-			//
-			expectedIPFamilyPolicy: &singleStack,
-			expectedIPFamilies:     []api.IPFamily{api.IPv4Protocol},
-			expectError:            false,
-		},
+		*/
 		{
 			name:       "[dualstack:v6,v4] set: v4ClusterIPSet",
 			onGet:      false,
@@ -4972,21 +5005,23 @@ func TestDefaultingValidation(t *testing.T) {
 			expectedIPFamilies:     []api.IPFamily{api.IPv4Protocol},
 			expectError:            false,
 		},
-		{
-			name:       "[dualstack:v6,v4] get: v4IPFamilySet",
-			onGet:      true,
-			modifyRest: fnMakeDualStackStackIPv6IPv4Allocator,
-			svc: api.Service{
-				Spec: api.ServiceSpec{
-					Type:       api.ServiceTypeClusterIP,
-					IPFamilies: []api.IPFamily{api.IPv4Protocol},
+		/*
+			{
+				name:       "[dualstack:v6,v4] get: v4IPFamilySet",
+				onGet:      true,
+				modifyRest: fnMakeDualStackStackIPv6IPv4Allocator,
+				svc: api.Service{
+					Spec: api.ServiceSpec{
+						Type:       api.ServiceTypeClusterIP,
+						IPFamilies: []api.IPFamily{api.IPv4Protocol},
+					},
 				},
+				//
+				expectedIPFamilyPolicy: &singleStack,
+				expectedIPFamilies:     []api.IPFamily{api.IPv4Protocol},
+				expectError:            false,
 			},
-			//
-			expectedIPFamilyPolicy: &singleStack,
-			expectedIPFamilies:     []api.IPFamily{api.IPv4Protocol},
-			expectError:            false,
-		},
+		*/
 		{
 			name:       "[dualstack:v6,v4] set: v4IPFamilySet",
 			onGet:      false,
@@ -5002,10 +5037,27 @@ func TestDefaultingValidation(t *testing.T) {
 			expectedIPFamilies:     []api.IPFamily{api.IPv4Protocol},
 			expectError:            false,
 		},
-
+		/*
+			{
+				name:       "[dualstack:v6,v4] get: v4IPFamilySet v4ClusterIPSet",
+				onGet:      true,
+				modifyRest: fnMakeDualStackStackIPv6IPv4Allocator,
+				svc: api.Service{
+					Spec: api.ServiceSpec{
+						Type:       api.ServiceTypeClusterIP,
+						ClusterIPs: []string{"10.0.0.4"},
+						IPFamilies: []api.IPFamily{api.IPv4Protocol},
+					},
+				},
+				//
+				expectedIPFamilyPolicy: &singleStack,
+				expectedIPFamilies:     []api.IPFamily{api.IPv4Protocol},
+				expectError:            false,
+			},
+		*/
 		{
-			name:       "[dualstack:v6,v4] get: v4IPFamilySet v4ClusterIPSet",
-			onGet:      true,
+			name:       "[dualstack:v6,v4] set: v4IPFamilySet",
+			onGet:      false,
 			modifyRest: fnMakeDualStackStackIPv6IPv4Allocator,
 			svc: api.Service{
 				Spec: api.ServiceSpec{
@@ -5019,38 +5071,24 @@ func TestDefaultingValidation(t *testing.T) {
 			expectedIPFamilies:     []api.IPFamily{api.IPv4Protocol},
 			expectError:            false,
 		},
-		{
-			name:       "[dualstack:v6,v4] set: v4IPFamilySet",
-			onGet:      false,
-			modifyRest: fnMakeDualStackStackIPv6IPv4Allocator,
-			svc: api.Service{
-				Spec: api.ServiceSpec{
-					Type:       api.ServiceTypeClusterIP,
-					ClusterIPs: []string{"10.0.0.4"},
-					IPFamilies: []api.IPFamily{api.IPv4Protocol},
+		/*
+			// v6 tests
+			{
+				name:       "[dualstack:v6,v4] get: v6ClusterIPSet",
+				onGet:      true,
+				modifyRest: fnMakeDualStackStackIPv6IPv4Allocator,
+				svc: api.Service{
+					Spec: api.ServiceSpec{
+						Type:       api.ServiceTypeClusterIP,
+						ClusterIPs: []string{"2000::1"},
+					},
 				},
+				//
+				expectedIPFamilyPolicy: &singleStack,
+				expectedIPFamilies:     []api.IPFamily{api.IPv6Protocol},
+				expectError:            false,
 			},
-			//
-			expectedIPFamilyPolicy: &singleStack,
-			expectedIPFamilies:     []api.IPFamily{api.IPv4Protocol},
-			expectError:            false,
-		},
-		// v6 tests
-		{
-			name:       "[dualstack:v6,v4] get: v6ClusterIPSet",
-			onGet:      true,
-			modifyRest: fnMakeDualStackStackIPv6IPv4Allocator,
-			svc: api.Service{
-				Spec: api.ServiceSpec{
-					Type:       api.ServiceTypeClusterIP,
-					ClusterIPs: []string{"2000::1"},
-				},
-			},
-			//
-			expectedIPFamilyPolicy: &singleStack,
-			expectedIPFamilies:     []api.IPFamily{api.IPv6Protocol},
-			expectError:            false,
-		},
+		*/
 		{
 			name:       "[dualstack:v6,v4] set: v6ClusterIPSet",
 			onGet:      false,
@@ -5066,21 +5104,23 @@ func TestDefaultingValidation(t *testing.T) {
 			expectedIPFamilies:     []api.IPFamily{api.IPv6Protocol},
 			expectError:            false,
 		},
-		{
-			name:       "[dualstack:v6,v4] get: v6IPFamilySet",
-			onGet:      true,
-			modifyRest: fnMakeDualStackStackIPv6IPv4Allocator,
-			svc: api.Service{
-				Spec: api.ServiceSpec{
-					Type:       api.ServiceTypeClusterIP,
-					IPFamilies: []api.IPFamily{api.IPv6Protocol},
+		/*
+			{
+				name:       "[dualstack:v6,v4] get: v6IPFamilySet",
+				onGet:      true,
+				modifyRest: fnMakeDualStackStackIPv6IPv4Allocator,
+				svc: api.Service{
+					Spec: api.ServiceSpec{
+						Type:       api.ServiceTypeClusterIP,
+						IPFamilies: []api.IPFamily{api.IPv6Protocol},
+					},
 				},
+				//
+				expectedIPFamilyPolicy: &singleStack,
+				expectedIPFamilies:     []api.IPFamily{api.IPv6Protocol},
+				expectError:            false,
 			},
-			//
-			expectedIPFamilyPolicy: &singleStack,
-			expectedIPFamilies:     []api.IPFamily{api.IPv6Protocol},
-			expectError:            false,
-		},
+		*/
 		{
 			name:       "[dualstack:v6,v4] set: v6IPFamilySet",
 			onGet:      false,
@@ -5096,23 +5136,24 @@ func TestDefaultingValidation(t *testing.T) {
 			expectedIPFamilies:     []api.IPFamily{api.IPv6Protocol},
 			expectError:            false,
 		},
-
-		{
-			name:       "[dualstack:v6,v4] get: v6IPFamilySet v6ClusterIPSet",
-			onGet:      true,
-			modifyRest: fnMakeDualStackStackIPv6IPv4Allocator,
-			svc: api.Service{
-				Spec: api.ServiceSpec{
-					Type:       api.ServiceTypeClusterIP,
-					ClusterIPs: []string{"2000::1"},
-					IPFamilies: []api.IPFamily{api.IPv6Protocol},
+		/*
+			{
+				name:       "[dualstack:v6,v4] get: v6IPFamilySet v6ClusterIPSet",
+				onGet:      true,
+				modifyRest: fnMakeDualStackStackIPv6IPv4Allocator,
+				svc: api.Service{
+					Spec: api.ServiceSpec{
+						Type:       api.ServiceTypeClusterIP,
+						ClusterIPs: []string{"2000::1"},
+						IPFamilies: []api.IPFamily{api.IPv6Protocol},
+					},
 				},
+				//
+				expectedIPFamilyPolicy: &singleStack,
+				expectedIPFamilies:     []api.IPFamily{api.IPv6Protocol},
+				expectError:            false,
 			},
-			//
-			expectedIPFamilyPolicy: &singleStack,
-			expectedIPFamilies:     []api.IPFamily{api.IPv6Protocol},
-			expectError:            false,
-		},
+		*/
 		{
 			name:       "[dualstack:v6,v4] set: v6IPFamilySet",
 			onGet:      false,
@@ -5437,7 +5478,7 @@ func TestDefaultingValidation(t *testing.T) {
 				testCase.modifyRest(storage)
 			}
 
-			err := storage.tryDefaultValidateServiceClusterIPFields(&testCase.svc, testCase.onGet)
+			err := storage.tryDefaultValidateServiceClusterIPFields(&testCase.svc)
 			if err != nil && !testCase.expectError {
 				t.Fatalf("error %v was not expected", err)
 			}

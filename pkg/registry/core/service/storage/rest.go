@@ -40,14 +40,11 @@ import (
 
 	apiservice "k8s.io/kubernetes/pkg/api/service"
 	api "k8s.io/kubernetes/pkg/apis/core"
-	//"k8s.io/kubernetes/pkg/apis/core/helper"
 	"k8s.io/kubernetes/pkg/apis/core/validation"
 	registry "k8s.io/kubernetes/pkg/registry/core/service"
 	"k8s.io/kubernetes/pkg/registry/core/service/ipallocator"
 	"k8s.io/kubernetes/pkg/registry/core/service/portallocator"
 	netutil "k8s.io/utils/net"
-	//	utilfeature "k8s.io/apiserver/pkg/util/feature"
-	// "k8s.io/kubernetes/pkg/features"
 )
 
 // REST adapts a service registry into apiserver's RESTStorage model.
@@ -184,9 +181,7 @@ func (rs *REST) Get(ctx context.Context, name string, options *metav1.GetOptions
 	// default on read for pre-existing services
 	svc := obj.(*api.Service)
 
-	// we expect no error here
-	_ = rs.tryDefaultValidateServiceClusterIPFields(svc, true)
-	return svc, err
+	return svc, nil
 }
 
 func (rs *REST) List(ctx context.Context, options *metainternalversion.ListOptions) (runtime.Object, error) {
@@ -224,7 +219,7 @@ func (rs *REST) Create(ctx context.Context, obj runtime.Object, createValidation
 	// try set ip families (for missing ip families)
 	// we do it here, since we want this to be visible
 	// even when dryRun == true
-	if err := rs.tryDefaultValidateServiceClusterIPFields(service, false); err != nil {
+	if err := rs.tryDefaultValidateServiceClusterIPFields(service); err != nil {
 		return nil, err
 	}
 
@@ -445,7 +440,7 @@ func (rs *REST) Update(ctx context.Context, name string, objInfo rest.UpdatedObj
 	defer nodePortOp.Finish()
 
 	// try set ip families (for missing ip families)
-	if err := rs.tryDefaultValidateServiceClusterIPFields(service, false); err != nil {
+	if err := rs.tryDefaultValidateServiceClusterIPFields(service); err != nil {
 		return nil, false, err
 	}
 
@@ -756,7 +751,7 @@ func (rs *REST) releaseServiceClusterIPs(service *api.Service) (released map[api
 
 // attempts to default service ip families according to cluster configuration
 // while ensuring that provided families are configured on cluster.
-func (rs *REST) tryDefaultValidateServiceClusterIPFields(service *api.Service, onGet bool) error {
+func (rs *REST) tryDefaultValidateServiceClusterIPFields(service *api.Service) error {
 	// can not do anything here
 	if service.Spec.Type == api.ServiceTypeExternalName {
 		return nil
@@ -775,21 +770,17 @@ func (rs *REST) tryDefaultValidateServiceClusterIPFields(service *api.Service, o
 		// family is not there.
 		if i > len(service.Spec.IPFamilies)-1 {
 			if isIPv6 {
-				if !onGet {
-					// first make sure that family(ip) is configured
-					if _, found := rs.serviceIPAllocatorsByFamily[api.IPv6Protocol]; !found {
-						el := field.ErrorList{field.Invalid(field.NewPath("spec", "clusterIPs").Index(i), service.Spec.ClusterIPs, "ClusterIP of IPv6 can not be used, IPv6 is not configuerd on cluster")}
-						return errors.NewInvalid(api.Kind("Service"), service.Name, el)
-					}
+				// first make sure that family(ip) is configured
+				if _, found := rs.serviceIPAllocatorsByFamily[api.IPv6Protocol]; !found {
+					el := field.ErrorList{field.Invalid(field.NewPath("spec", "clusterIPs").Index(i), service.Spec.ClusterIPs, "ClusterIP of IPv6 can not be used, IPv6 is not configuerd on cluster")}
+					return errors.NewInvalid(api.Kind("Service"), service.Name, el)
 				}
 				service.Spec.IPFamilies = append(service.Spec.IPFamilies, api.IPv6Protocol)
 			} else {
 				// first make sure that family(ip) is configured
-				if !onGet {
-					if _, found := rs.serviceIPAllocatorsByFamily[api.IPv4Protocol]; !found {
-						el := field.ErrorList{field.Invalid(field.NewPath("spec", "clusterIPs").Index(i), service.Spec.ClusterIPs, "ClusterIP of IPv4 can not be used, IPv4 is not configuerd on cluster")}
-						return errors.NewInvalid(api.Kind("Service"), service.Name, el)
-					}
+				if _, found := rs.serviceIPAllocatorsByFamily[api.IPv4Protocol]; !found {
+					el := field.ErrorList{field.Invalid(field.NewPath("spec", "clusterIPs").Index(i), service.Spec.ClusterIPs, "ClusterIP of IPv4 can not be used, IPv4 is not configuerd on cluster")}
+					return errors.NewInvalid(api.Kind("Service"), service.Name, el)
 				}
 				service.Spec.IPFamilies = append(service.Spec.IPFamilies, api.IPv4Protocol)
 			}
@@ -829,31 +820,29 @@ func (rs *REST) tryDefaultValidateServiceClusterIPFields(service *api.Service, o
 	}
 
 	// ipfamily check
-	if !onGet {
-		if len(service.Spec.ClusterIPs) > 0 && service.Spec.ClusterIPs[0] == api.ClusterIPNone && service.Spec.Selector == nil {
-			klog.V(4).Infof("service %v/%v is a headless service. no validation will be perfomed on its ipfamilies:%v", service.Namespace, service.Name, service.Spec.IPFamilies)
-		} else {
-			// the following applies on all type of services including headless w/ selector
+	if len(service.Spec.ClusterIPs) > 0 && service.Spec.ClusterIPs[0] == api.ClusterIPNone && service.Spec.Selector == nil {
+		klog.V(4).Infof("service %v/%v is a headless service. no validation will be perfomed on its ipfamilies:%v", service.Namespace, service.Name, service.Spec.IPFamilies)
+	} else {
+		// the following applies on all type of services including headless w/ selector
 
-			// asking for dual stack on a none dual stack cluster
-			// should fail without assigning any family
-			if service.Spec.IPFamilyPolicy != nil && *(service.Spec.IPFamilyPolicy) == api.RequireDualStack && len(rs.serviceIPAllocatorsByFamily) < 2 {
-				el := field.ErrorList{field.Invalid(field.NewPath("spec", "ipFamilyPolicy"), service.Spec.IPFamilyPolicy, "Cluster is not configured for dual stack services")}
+		// asking for dual stack on a none dual stack cluster
+		// should fail without assigning any family
+		if service.Spec.IPFamilyPolicy != nil && *(service.Spec.IPFamilyPolicy) == api.RequireDualStack && len(rs.serviceIPAllocatorsByFamily) < 2 {
+			el := field.ErrorList{field.Invalid(field.NewPath("spec", "ipFamilyPolicy"), service.Spec.IPFamilyPolicy, "Cluster is not configured for dual stack services")}
+			return errors.NewInvalid(api.Kind("Service"), service.Name, el)
+		}
+
+		//TODO(khenidak) this code, will become dead, because the above check will trigger before this one
+		// we need to make a choice which error we want to return (family or general "no dual stack for you"
+		// OR find a way to return multi validation error similar to validation package
+
+		// if there is a family requested then it has to be configured on cluster
+		// that means if the service is dual stack and cluster isn't  user won't get "sorry service is dual stack, but cluster isn't"
+		// they will get specific error on which ip family not configured on cluster
+		for i, ipFamily := range service.Spec.IPFamilies {
+			if _, found := rs.serviceIPAllocatorsByFamily[ipFamily]; !found {
+				el := field.ErrorList{field.Invalid(field.NewPath("spec", "ipFamilies").Index(i), service.Spec.ClusterIPs, fmt.Sprintf("ipfamily %v is not configured on cluster", ipFamily))}
 				return errors.NewInvalid(api.Kind("Service"), service.Name, el)
-			}
-
-			//TODO(khenidak) this code, will become dead, because the above check will trigger before this one
-			// we need to make a choice which error we want to return (family or general "no dual stack for you"
-			// OR find a way to return multi validation error similar to validation package
-
-			// if there is a family requested then it has to be configured on cluster
-			// that means if the service is dual stack and cluster isn't  user won't get "sorry service is dual stack, but cluster isn't"
-			// they will get specific error on which ip family not configured on cluster
-			for i, ipFamily := range service.Spec.IPFamilies {
-				if _, found := rs.serviceIPAllocatorsByFamily[ipFamily]; !found {
-					el := field.ErrorList{field.Invalid(field.NewPath("spec", "ipFamilies").Index(i), service.Spec.ClusterIPs, fmt.Sprintf("ipfamily %v is not configured on cluster", ipFamily))}
-					return errors.NewInvalid(api.Kind("Service"), service.Name, el)
-				}
 			}
 		}
 	}
@@ -872,8 +861,7 @@ func (rs *REST) tryDefaultValidateServiceClusterIPFields(service *api.Service, o
 
 	// is this service looking for dual stack, and this cluster does have two families?
 	// if so, then append the missing family
-	if !onGet &&
-		*(service.Spec.IPFamilyPolicy) != api.SingleStack &&
+	if *(service.Spec.IPFamilyPolicy) != api.SingleStack &&
 		len(service.Spec.IPFamilies) == 1 &&
 		len(rs.serviceIPAllocatorsByFamily) == 2 {
 
