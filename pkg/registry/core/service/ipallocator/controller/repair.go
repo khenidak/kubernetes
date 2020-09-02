@@ -195,6 +195,14 @@ func (c *Repair) runOnce() error {
 		return fmt.Errorf("unable to refresh the service IP block: %v", err)
 	}
 
+	getFamilyByIP := func(ip string) v1.IPFamily {
+		if netutil.IsIPv6String(ip) {
+			return v1.IPv6Protocol
+		}
+
+		return v1.IPv4Protocol
+	}
+
 	// Check every Service's ClusterIP, and rebuild the state as we think it should be.
 	for _, svc := range list.Items {
 		if !helper.IsServiceIPSet(&svc) {
@@ -215,8 +223,16 @@ func (c *Repair) runOnce() error {
 				continue
 			}
 
-			// if we have an ip, then we must have a family
-			family := svc.Spec.IPFamilies[idx]
+			var family v1.IPFamily
+			if idx >= len(svc.Spec.IPFamilies) {
+				// (khenidak) the get decorator for some reason does not work within
+				// api server. this is a stop gap until we identify what is wrong
+				family = getFamilyByIP(ip.String())
+			} else {
+				// if we have an ip, then we must have a family
+				// for services that were created after the api upgrade
+				family = svc.Spec.IPFamilies[idx]
+			}
 
 			// mark it as in-use
 			actualAlloc := rebuiltByFamily[family]
