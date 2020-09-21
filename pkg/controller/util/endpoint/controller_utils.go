@@ -279,16 +279,17 @@ func (sl portsInOrder) Less(i, j int) bool {
 }
 
 // IsIPv6Service checks if svc should have IPv6 endpoints
+// (khenidak) IMPORTANT: this function is used only by endpoint
+// controller, which does not understand multifamily services.
+// so it has to depend on ClusterIP.
 func IsIPv6Service(svc *v1.Service) bool {
 	if helper.IsServiceIPSet(svc) {
 		return utilnet.IsIPv6String(svc.Spec.ClusterIP)
-	} else if svc.Spec.IPFamily != nil {
-		return *svc.Spec.IPFamily == v1.IPv6Protocol
-	} else {
-		// FIXME: for legacy headless Services with no IPFamily, the current
-		// thinking is that we should use the cluster default. Unfortunately
-		// the endpoint controller doesn't know the cluster default. For now,
-		// assume it's IPv4.
-		return false
 	}
+
+	// FIXME: for legacy headless Services with no IPFamily, the current
+	// thinking is that we should use the cluster default. Unfortunately
+	// the endpoint controller doesn't know the cluster default. For now,
+	// assume it's IPv4.
+	return false
 }

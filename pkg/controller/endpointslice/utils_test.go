@@ -245,7 +245,7 @@ func TestPodToEndpoint(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			endpoint := podToEndpoint(testCase.pod, testCase.node, testCase.svc)
+			endpoint := podToEndpoint(testCase.pod, testCase.node, testCase.svc, discovery.AddressTypeIPv4)
 			if !reflect.DeepEqual(testCase.expectedEndpoint, endpoint) {
 				t.Errorf("Expected endpoint: %v, got: %v", testCase.expectedEndpoint, endpoint)
 			}
@@ -467,7 +467,8 @@ func newServiceAndEndpointMeta(name, namespace string) (v1.Service, endpointMeta
 				Protocol:   v1.ProtocolTCP,
 				Name:       name,
 			}},
-			Selector: map[string]string{"foo": "bar"},
+			Selector:   map[string]string{"foo": "bar"},
+			IPFamilies: []v1.IPFamily{v1.IPv4Protocol},
 		},
 	}
 
@@ -494,5 +495,94 @@ func newEmptyEndpointSlice(n int, namespace string, endpointMeta endpointMeta, s
 		Ports:       endpointMeta.Ports,
 		AddressType: endpointMeta.AddressType,
 		Endpoints:   []discovery.Endpoint{},
+	}
+}
+
+func TestSupportedServiceAddressType(t *testing.T) {
+	testCases := []struct {
+		name                 string
+		service              v1.Service
+		expectedAddressTypes []discovery.AddressType
+	}{
+		{
+			name:                 "v4 service with no ip families (cluster upgrade)",
+			expectedAddressTypes: []discovery.AddressType{discovery.AddressTypeIPv4},
+			service: v1.Service{
+				Spec: v1.ServiceSpec{
+					ClusterIP:  "10.0.0.10",
+					IPFamilies: nil,
+				},
+			},
+		},
+		{
+			name:                 "v6 service with no ip families (cluster upgrade)",
+			expectedAddressTypes: []discovery.AddressType{discovery.AddressTypeIPv6},
+			service: v1.Service{
+				Spec: v1.ServiceSpec{
+					ClusterIP:  "2000::1",
+					IPFamilies: nil,
+				},
+			},
+		},
+		{
+			name:                 "v4 serviceservice",
+			expectedAddressTypes: []discovery.AddressType{discovery.AddressTypeIPv4},
+			service: v1.Service{
+				Spec: v1.ServiceSpec{
+					IPFamilies: []v1.IPFamily{v1.IPv4Protocol},
+				},
+			},
+		},
+		{
+			name:                 "v6 serviceservice",
+			expectedAddressTypes: []discovery.AddressType{discovery.AddressTypeIPv6},
+			service: v1.Service{
+				Spec: v1.ServiceSpec{
+					IPFamilies: []v1.IPFamily{v1.IPv6Protocol},
+				},
+			},
+		},
+		{
+			name:                 "v4,v6 serviceservice",
+			expectedAddressTypes: []discovery.AddressType{discovery.AddressTypeIPv4, discovery.AddressTypeIPv6},
+			service: v1.Service{
+				Spec: v1.ServiceSpec{
+					IPFamilies: []v1.IPFamily{v1.IPv4Protocol, v1.IPv6Protocol},
+				},
+			},
+		},
+		{
+			name:                 "v6,v4 serviceservice",
+			expectedAddressTypes: []discovery.AddressType{discovery.AddressTypeIPv6, discovery.AddressTypeIPv4},
+			service: v1.Service{
+				Spec: v1.ServiceSpec{
+					IPFamilies: []v1.IPFamily{v1.IPv6Protocol, v1.IPv4Protocol},
+				},
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			addressTypes := getAddressTypesForService(&testCase.service)
+			if len(addressTypes) != len(testCase.expectedAddressTypes) {
+				t.Fatalf("expected count address types %v got %v", len(testCase.expectedAddressTypes), len(addressTypes))
+			}
+
+			// compare
+			for _, expectedAddressType := range testCase.expectedAddressTypes {
+				found := false
+				for key := range addressTypes {
+					if key == expectedAddressType {
+						found = true
+						break
+
+					}
+				}
+				if !found {
+					t.Fatalf("expected address type %v was not found in the result", expectedAddressType)
+				}
+			}
+		})
 	}
 }

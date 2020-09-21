@@ -70,12 +70,23 @@ func TestReconcileEmpty(t *testing.T) {
 // a slice should be created
 func TestReconcile1Pod(t *testing.T) {
 	namespace := "test"
-	ipv6Family := corev1.IPv6Protocol
+	noFamilyService, _ := newServiceAndEndpointMeta("foo", namespace)
+	noFamilyService.Spec.ClusterIP = "10.0.0.10"
+	noFamilyService.Spec.IPFamilies = nil
+
 	svcv4, _ := newServiceAndEndpointMeta("foo", namespace)
 	svcv6, _ := newServiceAndEndpointMeta("foo", namespace)
-	svcv6.Spec.IPFamily = &ipv6Family
+	svcv6.Spec.IPFamilies = []corev1.IPFamily{corev1.IPv6Protocol}
 	svcv6ClusterIP, _ := newServiceAndEndpointMeta("foo", namespace)
 	svcv6ClusterIP.Spec.ClusterIP = "1234::5678:0000:0000:9abc:def1"
+	// newServiceAndEndpointMeta generates v4 single stack
+	svcv6ClusterIP.Spec.IPFamilies = []corev1.IPFamily{corev1.IPv6Protocol}
+
+	// dual stack
+	dualStackSvc, _ := newServiceAndEndpointMeta("foo", namespace)
+	dualStackSvc.Spec.IPFamilies = []corev1.IPFamily{corev1.IPv4Protocol, corev1.IPv6Protocol}
+	dualStackSvc.Spec.ClusterIP = "10.0.0.10"
+	dualStackSvc.Spec.ClusterIPs = []string{"10.0.0.10", "2000::1"}
 
 	pod1 := newPod(1, namespace, true, 1)
 	pod1.Status.PodIPs = []corev1.PodIP{{IP: "1.2.3.4"}, {IP: "1234::5678:0000:0000:9abc:def0"}}
@@ -91,61 +102,131 @@ func TestReconcile1Pod(t *testing.T) {
 	}
 
 	testCases := map[string]struct {
-		service             corev1.Service
-		expectedAddressType discovery.AddressType
-		expectedEndpoint    discovery.Endpoint
+		service                  corev1.Service
+		expectedEndpointPerSlice map[discovery.AddressType][]discovery.Endpoint
 	}{
+		"no-family-service": {
+			service: noFamilyService,
+			expectedEndpointPerSlice: map[discovery.AddressType][]discovery.Endpoint{
+				discovery.AddressTypeIPv4: {
+					{
+						Addresses:  []string{"1.2.3.4"},
+						Conditions: discovery.EndpointConditions{Ready: utilpointer.BoolPtr(true)},
+						Topology: map[string]string{
+							"kubernetes.io/hostname":        "node-1",
+							"topology.kubernetes.io/zone":   "us-central1-a",
+							"topology.kubernetes.io/region": "us-central1",
+						},
+						TargetRef: &corev1.ObjectReference{
+							Kind:      "Pod",
+							Namespace: namespace,
+							Name:      "pod1",
+						},
+					},
+				},
+			},
+		},
+
 		"ipv4": {
-			service:             svcv4,
-			expectedAddressType: discovery.AddressTypeIPv4,
-			expectedEndpoint: discovery.Endpoint{
-				Addresses:  []string{"1.2.3.4"},
-				Conditions: discovery.EndpointConditions{Ready: utilpointer.BoolPtr(true)},
-				Topology: map[string]string{
-					"kubernetes.io/hostname":        "node-1",
-					"topology.kubernetes.io/zone":   "us-central1-a",
-					"topology.kubernetes.io/region": "us-central1",
-				},
-				TargetRef: &corev1.ObjectReference{
-					Kind:      "Pod",
-					Namespace: namespace,
-					Name:      "pod1",
+			service: svcv4,
+			expectedEndpointPerSlice: map[discovery.AddressType][]discovery.Endpoint{
+				discovery.AddressTypeIPv4: {
+					{
+						Addresses:  []string{"1.2.3.4"},
+						Conditions: discovery.EndpointConditions{Ready: utilpointer.BoolPtr(true)},
+						Topology: map[string]string{
+							"kubernetes.io/hostname":        "node-1",
+							"topology.kubernetes.io/zone":   "us-central1-a",
+							"topology.kubernetes.io/region": "us-central1",
+						},
+						TargetRef: &corev1.ObjectReference{
+							Kind:      "Pod",
+							Namespace: namespace,
+							Name:      "pod1",
+						},
+					},
 				},
 			},
 		},
+
 		"ipv6": {
-			service:             svcv6,
-			expectedAddressType: discovery.AddressTypeIPv6,
-			expectedEndpoint: discovery.Endpoint{
-				Addresses:  []string{"1234::5678:0000:0000:9abc:def0"},
-				Conditions: discovery.EndpointConditions{Ready: utilpointer.BoolPtr(true)},
-				Topology: map[string]string{
-					"kubernetes.io/hostname":        "node-1",
-					"topology.kubernetes.io/zone":   "us-central1-a",
-					"topology.kubernetes.io/region": "us-central1",
-				},
-				TargetRef: &corev1.ObjectReference{
-					Kind:      "Pod",
-					Namespace: namespace,
-					Name:      "pod1",
+			service: svcv6,
+			expectedEndpointPerSlice: map[discovery.AddressType][]discovery.Endpoint{
+				discovery.AddressTypeIPv6: {
+					{
+						Addresses:  []string{"1234::5678:0000:0000:9abc:def0"},
+						Conditions: discovery.EndpointConditions{Ready: utilpointer.BoolPtr(true)},
+						Topology: map[string]string{
+							"kubernetes.io/hostname":        "node-1",
+							"topology.kubernetes.io/zone":   "us-central1-a",
+							"topology.kubernetes.io/region": "us-central1",
+						},
+						TargetRef: &corev1.ObjectReference{
+							Kind:      "Pod",
+							Namespace: namespace,
+							Name:      "pod1",
+						},
+					},
 				},
 			},
 		},
+
 		"ipv6-clusterip": {
-			service:             svcv6ClusterIP,
-			expectedAddressType: discovery.AddressTypeIPv6,
-			expectedEndpoint: discovery.Endpoint{
-				Addresses:  []string{"1234::5678:0000:0000:9abc:def0"},
-				Conditions: discovery.EndpointConditions{Ready: utilpointer.BoolPtr(true)},
-				Topology: map[string]string{
-					"kubernetes.io/hostname":        "node-1",
-					"topology.kubernetes.io/zone":   "us-central1-a",
-					"topology.kubernetes.io/region": "us-central1",
+			service: svcv6ClusterIP,
+			expectedEndpointPerSlice: map[discovery.AddressType][]discovery.Endpoint{
+				discovery.AddressTypeIPv6: {
+					{
+						Addresses:  []string{"1234::5678:0000:0000:9abc:def0"},
+						Conditions: discovery.EndpointConditions{Ready: utilpointer.BoolPtr(true)},
+						Topology: map[string]string{
+							"kubernetes.io/hostname":        "node-1",
+							"topology.kubernetes.io/zone":   "us-central1-a",
+							"topology.kubernetes.io/region": "us-central1",
+						},
+						TargetRef: &corev1.ObjectReference{
+							Kind:      "Pod",
+							Namespace: namespace,
+							Name:      "pod1",
+						},
+					},
 				},
-				TargetRef: &corev1.ObjectReference{
-					Kind:      "Pod",
-					Namespace: namespace,
-					Name:      "pod1",
+			},
+		},
+
+		"dualstack-service": {
+			service: dualStackSvc,
+			expectedEndpointPerSlice: map[discovery.AddressType][]discovery.Endpoint{
+				discovery.AddressTypeIPv6: {
+					{
+						Addresses:  []string{"1234::5678:0000:0000:9abc:def0"},
+						Conditions: discovery.EndpointConditions{Ready: utilpointer.BoolPtr(true)},
+						Topology: map[string]string{
+							"kubernetes.io/hostname":        "node-1",
+							"topology.kubernetes.io/zone":   "us-central1-a",
+							"topology.kubernetes.io/region": "us-central1",
+						},
+						TargetRef: &corev1.ObjectReference{
+							Kind:      "Pod",
+							Namespace: namespace,
+							Name:      "pod1",
+						},
+					},
+				},
+				discovery.AddressTypeIPv4: {
+					{
+						Addresses:  []string{"1.2.3.4"},
+						Conditions: discovery.EndpointConditions{Ready: utilpointer.BoolPtr(true)},
+						Topology: map[string]string{
+							"kubernetes.io/hostname":        "node-1",
+							"topology.kubernetes.io/zone":   "us-central1-a",
+							"topology.kubernetes.io/region": "us-central1",
+						},
+						TargetRef: &corev1.ObjectReference{
+							Kind:      "Pod",
+							Namespace: namespace,
+							Name:      "pod1",
+						},
+					},
 				},
 			},
 		},
@@ -159,41 +240,58 @@ func TestReconcile1Pod(t *testing.T) {
 			r := newReconciler(client, []*corev1.Node{node1}, defaultMaxEndpointsPerSlice)
 			reconcileHelper(t, r, &testCase.service, []*corev1.Pod{pod1}, []*discovery.EndpointSlice{}, triggerTime)
 
-			if len(client.Actions()) != 1 {
-				t.Errorf("Expected 1 clientset action, got %d", len(client.Actions()))
+			if len(client.Actions()) != len(testCase.expectedEndpointPerSlice) {
+				t.Errorf("Expected %v clientset action, got %d", len(testCase.expectedEndpointPerSlice), len(client.Actions()))
 			}
 
 			slices := fetchEndpointSlices(t, client, namespace)
 
-			if len(slices) != 1 {
-				t.Fatalf("Expected 1 EndpointSlice, got %d", len(slices))
+			if len(slices) != len(testCase.expectedEndpointPerSlice) {
+				t.Fatalf("Expected %v EndpointSlice, got %d", len(testCase.expectedEndpointPerSlice), len(slices))
 			}
 
-			slice := slices[0]
-			if !strings.HasPrefix(slice.Name, testCase.service.Name) {
-				t.Errorf("Expected EndpointSlice name to start with %s, got %s", testCase.service.Name, slice.Name)
+			for _, slice := range slices {
+				if !strings.HasPrefix(slice.Name, testCase.service.Name) {
+					t.Fatalf("Expected EndpointSlice name to start with %s, got %s", testCase.service.Name, slice.Name)
+				}
+
+				if slice.Labels[discovery.LabelServiceName] != testCase.service.Name {
+					t.Fatalf("Expected EndpointSlice to have label set with %s value, got %s", testCase.service.Name, slice.Labels[discovery.LabelServiceName])
+				}
+
+				if slice.Annotations[corev1.EndpointsLastChangeTriggerTime] != triggerTime.Format(time.RFC3339Nano) {
+					t.Fatalf("Expected EndpointSlice trigger time annotation to be %s, got %s", triggerTime.Format(time.RFC3339Nano), slice.Annotations[corev1.EndpointsLastChangeTriggerTime])
+				}
+
+				// validate that this slice has address type matching expected
+				expectedEndPointList := testCase.expectedEndpointPerSlice[slice.AddressType]
+				if expectedEndPointList == nil {
+					t.Fatalf("address type %v is not expected", slice.AddressType)
+				}
+
+				if len(slice.Endpoints) != len(expectedEndPointList) {
+					t.Fatalf("Expected %v Endpoint, got %d", len(expectedEndPointList), len(slice.Endpoints))
+				}
+
+				// test is limited to *ONE* endpoint
+				endpoint := slice.Endpoints[0]
+				if !reflect.DeepEqual(endpoint, expectedEndPointList[0]) {
+					t.Fatalf("Expected endpoint: %+v, got: %+v", expectedEndPointList[0], endpoint)
+				}
+
+				expectTrackedResourceVersion(t, r.endpointSliceTracker, &slice, "100")
+
+				expectMetrics(t,
+					expectedMetrics{
+						desiredSlices:    1,
+						actualSlices:     1,
+						desiredEndpoints: 1,
+						addedPerSync:     len(testCase.expectedEndpointPerSlice),
+						removedPerSync:   0,
+						numCreated:       len(testCase.expectedEndpointPerSlice),
+						numUpdated:       0,
+						numDeleted:       0})
 			}
-
-			if slice.Labels[discovery.LabelServiceName] != testCase.service.Name {
-				t.Errorf("Expected EndpointSlice to have label set with %s value, got %s", testCase.service.Name, slice.Labels[discovery.LabelServiceName])
-			}
-
-			if slice.Annotations[corev1.EndpointsLastChangeTriggerTime] != triggerTime.Format(time.RFC3339Nano) {
-				t.Errorf("Expected EndpointSlice trigger time annotation to be %s, got %s", triggerTime.Format(time.RFC3339Nano), slice.Annotations[corev1.EndpointsLastChangeTriggerTime])
-			}
-
-			if len(slice.Endpoints) != 1 {
-				t.Fatalf("Expected 1 Endpoint, got %d", len(slice.Endpoints))
-			}
-
-			endpoint := slice.Endpoints[0]
-			if !reflect.DeepEqual(endpoint, testCase.expectedEndpoint) {
-				t.Errorf("Expected endpoint: %+v, got: %+v", testCase.expectedEndpoint, endpoint)
-			}
-
-			expectTrackedResourceVersion(t, r.endpointSliceTracker, &slice, "100")
-
-			expectMetrics(t, expectedMetrics{desiredSlices: 1, actualSlices: 1, desiredEndpoints: 1, addedPerSync: 1, removedPerSync: 0, numCreated: 1, numUpdated: 0, numDeleted: 0})
 		})
 	}
 }
@@ -313,13 +411,13 @@ func TestReconcileEndpointSlicesSomePreexisting(t *testing.T) {
 	// have approximately 1/4 in first slice
 	endpointSlice1 := newEmptyEndpointSlice(1, namespace, endpointMeta, svc)
 	for i := 1; i < len(pods)-4; i += 4 {
-		endpointSlice1.Endpoints = append(endpointSlice1.Endpoints, podToEndpoint(pods[i], &corev1.Node{}, &svc))
+		endpointSlice1.Endpoints = append(endpointSlice1.Endpoints, podToEndpoint(pods[i], &corev1.Node{}, &svc, discovery.AddressTypeIPv4))
 	}
 
 	// have approximately 1/4 in second slice
 	endpointSlice2 := newEmptyEndpointSlice(2, namespace, endpointMeta, svc)
 	for i := 3; i < len(pods)-4; i += 4 {
-		endpointSlice2.Endpoints = append(endpointSlice2.Endpoints, podToEndpoint(pods[i], &corev1.Node{}, &svc))
+		endpointSlice2.Endpoints = append(endpointSlice2.Endpoints, podToEndpoint(pods[i], &corev1.Node{}, &svc, discovery.AddressTypeIPv4))
 	}
 
 	existingSlices := []*discovery.EndpointSlice{endpointSlice1, endpointSlice2}
@@ -369,13 +467,13 @@ func TestReconcileEndpointSlicesSomePreexistingWorseAllocation(t *testing.T) {
 	// have approximately 1/4 in first slice
 	endpointSlice1 := newEmptyEndpointSlice(1, namespace, endpointMeta, svc)
 	for i := 1; i < len(pods)-4; i += 4 {
-		endpointSlice1.Endpoints = append(endpointSlice1.Endpoints, podToEndpoint(pods[i], &corev1.Node{}, &svc))
+		endpointSlice1.Endpoints = append(endpointSlice1.Endpoints, podToEndpoint(pods[i], &corev1.Node{}, &svc, discovery.AddressTypeIPv4))
 	}
 
 	// have approximately 1/4 in second slice
 	endpointSlice2 := newEmptyEndpointSlice(2, namespace, endpointMeta, svc)
 	for i := 3; i < len(pods)-4; i += 4 {
-		endpointSlice2.Endpoints = append(endpointSlice2.Endpoints, podToEndpoint(pods[i], &corev1.Node{}, &svc))
+		endpointSlice2.Endpoints = append(endpointSlice2.Endpoints, podToEndpoint(pods[i], &corev1.Node{}, &svc, discovery.AddressTypeIPv4))
 	}
 
 	existingSlices := []*discovery.EndpointSlice{endpointSlice1, endpointSlice2}
@@ -455,7 +553,7 @@ func TestReconcileEndpointSlicesRecycling(t *testing.T) {
 		if i%30 == 0 {
 			existingSlices = append(existingSlices, newEmptyEndpointSlice(sliceNum, namespace, endpointMeta, svc))
 		}
-		existingSlices[sliceNum].Endpoints = append(existingSlices[sliceNum].Endpoints, podToEndpoint(pod, &corev1.Node{}, &svc))
+		existingSlices[sliceNum].Endpoints = append(existingSlices[sliceNum].Endpoints, podToEndpoint(pod, &corev1.Node{}, &svc, discovery.AddressTypeIPv4))
 	}
 
 	cmc := newCacheMutationCheck(existingSlices)
@@ -497,7 +595,7 @@ func TestReconcileEndpointSlicesUpdatePacking(t *testing.T) {
 	slice1 := newEmptyEndpointSlice(1, namespace, endpointMeta, svc)
 	for i := 0; i < 80; i++ {
 		pod := newPod(i, namespace, true, 1)
-		slice1.Endpoints = append(slice1.Endpoints, podToEndpoint(pod, &corev1.Node{}, &svc))
+		slice1.Endpoints = append(slice1.Endpoints, podToEndpoint(pod, &corev1.Node{}, &svc, discovery.AddressTypeIPv4))
 		pods = append(pods, pod)
 	}
 	existingSlices = append(existingSlices, slice1)
@@ -505,7 +603,7 @@ func TestReconcileEndpointSlicesUpdatePacking(t *testing.T) {
 	slice2 := newEmptyEndpointSlice(2, namespace, endpointMeta, svc)
 	for i := 100; i < 120; i++ {
 		pod := newPod(i, namespace, true, 1)
-		slice2.Endpoints = append(slice2.Endpoints, podToEndpoint(pod, &corev1.Node{}, &svc))
+		slice2.Endpoints = append(slice2.Endpoints, podToEndpoint(pod, &corev1.Node{}, &svc, discovery.AddressTypeIPv4))
 		pods = append(pods, pod)
 	}
 	existingSlices = append(existingSlices, slice2)
@@ -558,7 +656,7 @@ func TestReconcileEndpointSlicesReplaceDeprecated(t *testing.T) {
 	slice1 := newEmptyEndpointSlice(1, namespace, endpointMeta, svc)
 	for i := 0; i < 80; i++ {
 		pod := newPod(i, namespace, true, 1)
-		slice1.Endpoints = append(slice1.Endpoints, podToEndpoint(pod, &corev1.Node{}, &corev1.Service{Spec: corev1.ServiceSpec{}}))
+		slice1.Endpoints = append(slice1.Endpoints, podToEndpoint(pod, &corev1.Node{}, &corev1.Service{Spec: corev1.ServiceSpec{}}, discovery.AddressTypeIPv4))
 		pods = append(pods, pod)
 	}
 	existingSlices = append(existingSlices, slice1)
@@ -566,7 +664,7 @@ func TestReconcileEndpointSlicesReplaceDeprecated(t *testing.T) {
 	slice2 := newEmptyEndpointSlice(2, namespace, endpointMeta, svc)
 	for i := 100; i < 150; i++ {
 		pod := newPod(i, namespace, true, 1)
-		slice2.Endpoints = append(slice2.Endpoints, podToEndpoint(pod, &corev1.Node{}, &corev1.Service{Spec: corev1.ServiceSpec{}}))
+		slice2.Endpoints = append(slice2.Endpoints, podToEndpoint(pod, &corev1.Node{}, &corev1.Service{Spec: corev1.ServiceSpec{}}, discovery.AddressTypeIPv4))
 		pods = append(pods, pod)
 	}
 	existingSlices = append(existingSlices, slice2)
@@ -625,7 +723,7 @@ func TestReconcileEndpointSlicesRecreation(t *testing.T) {
 			slice := newEmptyEndpointSlice(1, namespace, endpointMeta, svc)
 
 			pod := newPod(1, namespace, true, 1)
-			slice.Endpoints = append(slice.Endpoints, podToEndpoint(pod, &corev1.Node{}, &corev1.Service{Spec: corev1.ServiceSpec{}}))
+			slice.Endpoints = append(slice.Endpoints, podToEndpoint(pod, &corev1.Node{}, &corev1.Service{Spec: corev1.ServiceSpec{}}, discovery.AddressTypeIPv4))
 
 			if !tc.ownedByService {
 				slice.OwnerReferences[0].UID = "different"
@@ -682,7 +780,8 @@ func TestReconcileEndpointSlicesNamedPorts(t *testing.T) {
 				TargetPort: portNameIntStr,
 				Protocol:   corev1.ProtocolTCP,
 			}},
-			Selector: map[string]string{"foo": "bar"},
+			Selector:   map[string]string{"foo": "bar"},
+			IPFamilies: []corev1.IPFamily{corev1.IPv4Protocol},
 		},
 	}
 
@@ -1055,6 +1154,11 @@ func expectUnorderedSlicesWithTopLevelAttrs(t *testing.T, endpointSlices []disco
 
 func expectActions(t *testing.T, actions []k8stesting.Action, num int, verb, resource string) {
 	t.Helper()
+	// if actions are less the below logic will panic
+	if num > len(actions) {
+		t.Fatalf("len of actions %v is unexpected. Expected to be at least %v", len(actions), num+1)
+	}
+
 	for i := 0; i < num; i++ {
 		relativePos := len(actions) - i - 1
 		assert.Equal(t, verb, actions[relativePos].GetVerb(), "Expected action -%d verb to be %s", i, verb)
